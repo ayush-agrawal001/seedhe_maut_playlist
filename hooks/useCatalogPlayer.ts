@@ -165,9 +165,9 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
 
           currentRef.current = track;
           setCurrent(track);
-          // Autoplay straight away; the player falls back to muted if the
-          // browser blocks sound before any interaction.
-          if (track.youtube) yt.load(track.youtube.videoId, true);
+          // Cue only — the first track waits for the user to press play.
+          // Later tracks (next / queue) still autoplay.
+          if (track.youtube) yt.load(track.youtube.videoId, false);
 
           setOffline(false);
           setFatalError(null);

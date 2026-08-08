@@ -609,8 +609,15 @@ button { font-family: inherit; }
 }
 @keyframes hintIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .ui-locked .f11hint { opacity: 0; }
-/* already fullscreen — the hint has done its job */
-.f11hint--gone { opacity: 0; visibility: hidden; }
+/* already fullscreen — the hint has done its job.
+   `animation: none` is required: hintIn uses fill-mode:both, whose final
+   opacity:1 would otherwise win over the declaration below. */
+.f11hint--gone {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .4s ease, visibility .4s ease;
+}
 
 /* F11 is a desktop affordance — no place for it on a phone */
 @media (max-width: 560px) { .f11hint { display: none; } }

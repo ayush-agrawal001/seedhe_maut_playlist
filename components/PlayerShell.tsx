@@ -21,24 +21,36 @@ export default function PlayerShell() {
   const p = useCatalogPlayer(PLAYER_ID);
   const [queueOpen, setQueueOpen] = useState(false);
   const [bootHeld, setBootHeld] = useState(true);
-  const [videoOn, setVideoOn] = useState(true); // video on by default
+  const [videoOn, setVideoOn] = useState(false); // video off by default
   const [locked, setLocked] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
   // F11 has no event of its own, but it changes viewport geometry; the
   // Fullscreen API covers the programmatic case. Watch both.
   useEffect(() => {
+    const mq = window.matchMedia("(display-mode: fullscreen)");
+
     const check = () => {
+      // F11 fires no event of its own and does not set fullscreenElement, so
+      // three signals are combined: the Fullscreen API, the display-mode media
+      // query (which F11 does satisfy in Chromium), and a viewport-height
+      // comparison as a last resort.
       const api = Boolean(document.fullscreenElement);
-      const f11 = window.innerHeight >= screen.height - 2;
-      setFullscreen(api || f11);
+      const displayMode = mq.matches;
+      const fills =
+        Math.abs(window.innerHeight - window.screen.height) <= 6 ||
+        window.outerHeight >= window.screen.height;
+      setFullscreen(api || displayMode || fills);
     };
+
     check();
     document.addEventListener("fullscreenchange", check);
     window.addEventListener("resize", check);
+    mq.addEventListener?.("change", check);
     return () => {
       document.removeEventListener("fullscreenchange", check);
       window.removeEventListener("resize", check);
+      mq.removeEventListener?.("change", check);
     };
   }, []);
 
