@@ -7,6 +7,7 @@ import type { ApiTrack } from "@/lib/types";
 interface Props {
   current: ApiTrack;
   playing: boolean;
+  busy: boolean;
   curTime: number;
   dur: number;
   volume: number;
@@ -24,6 +25,7 @@ interface Props {
 export default function Player({
   current,
   playing,
+  busy,
   curTime,
   dur,
   volume,
@@ -49,7 +51,7 @@ export default function Player({
   const volPct = (muted ? 0 : volume) * 100;
 
   return (
-    <div className={`player${playing ? " playing" : ""}`} id="player">
+    <div className={`player${playing ? " playing" : ""}${busy ? " busy" : ""}`} id="player">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         className="player__disc"
@@ -99,11 +101,14 @@ export default function Player({
 
         <button
           className="pctl pctl--play"
-          title={playing ? "Pause" : "Play"}
-          aria-label={playing ? "Pause" : "Play"}
+          title={busy ? "Loading…" : playing ? "Pause" : "Play"}
+          aria-label={busy ? "Loading" : playing ? "Pause" : "Play"}
           onClick={onToggle}
+          disabled={busy}
         >
-          {playing ? (
+          {busy ? (
+            <span className="pctl__spinner" aria-hidden />
+          ) : playing ? (
             <svg viewBox="0 0 24 24">
               <path d="M7.5 5h3.4v14H7.5zM13.1 5h3.4v14h-3.4z" />
             </svg>

@@ -133,6 +133,7 @@ export default function PlayerShell() {
         <Player
           current={p.current}
           playing={p.playing}
+          busy={p.busy}
           curTime={p.curTime}
           dur={p.dur}
           volume={p.volume}

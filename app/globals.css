@@ -599,3 +599,39 @@ button { font-family: inherit; }
 
 /* F11 is a desktop affordance — no place for it on a phone */
 @media (max-width: 560px) { .f11hint { display: none; } }
+
+
+/* ============================ Loading a track ============================ */
+/* Switching songs costs an /api/random round trip plus YouTube buffering, so
+   the transport shows it rather than looking frozen. */
+.pctl--play:disabled { cursor: progress; }
+.pctl__spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid rgba(17,17,17,.22);
+  border-top-color: #111;
+  animation: spinnerTurn .7s linear infinite;
+}
+@keyframes spinnerTurn { to { transform: rotate(360deg); } }
+
+/* the sleeve keeps turning, but dimmed, while the next track loads */
+.player.busy .player__disc {
+  animation-play-state: running;
+  opacity: .55;
+  transition: opacity .2s ease;
+}
+.player.busy .player__title,
+.player.busy .player__artist { opacity: .6; transition: opacity .2s ease; }
+
+/* indeterminate sweep along the seek rail */
+.player.busy .player__fill { width: 0 !important; }
+.player.busy .player__knob { opacity: 0; }
+.player.busy .player__bar::after {
+  content: ""; position: absolute; left: 0; height: 2.5px; width: 34%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
+  animation: railSweep 1.05s cubic-bezier(.5,0,.5,1) infinite;
+}
+@keyframes railSweep {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(330%); }
+}

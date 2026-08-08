@@ -79,6 +79,8 @@ export interface YouTubeApi {
   duration: number;
   /** Current playback quality id, or "" if unknown yet. */
   quality: string;
+  /** True while the player is fetching/buffering media. */
+  buffering: boolean;
   load: (videoId: string, autoplay: boolean) => void;
   play: () => void;
   pause: () => void;
@@ -129,6 +131,7 @@ export function useYouTubePlayer(
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [quality, setQuality] = useState("");
+  const [buffering, setBuffering] = useState(false);
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -181,18 +184,26 @@ export function useYouTubePlayer(
           onStateChange: (e: { data: number }) => {
             const S = window.YT!.PlayerState;
             if (e.data === S.ENDED) {
+              setBuffering(false);
               setPlaying(false);
               onEndedRef.current();
+            } else if (e.data === S.BUFFERING) {
+              setBuffering(true);
             } else if (e.data === S.PLAYING) {
+              setBuffering(false);
               setPlaying(true);
               try {
                 playerRef.current?.setPlaybackQuality("hd720");
               } catch {
                 /* ignore */
               }
-            } else if (e.data === S.PAUSED) setPlaying(false);
+            } else if (e.data === S.PAUSED) {
+              setBuffering(false);
+              setPlaying(false);
+            }
           },
           onError: (e: { data: number }) => {
+            setBuffering(false);
             setPlaying(false);
             onErrorRef.current?.(e.data);
           },
@@ -229,6 +240,7 @@ export function useYouTubePlayer(
     setCurrentTime(0);
     setDuration(0);
     setQuality("");
+    if (autoplay) setBuffering(true);
     const p = playerRef.current;
     if (!p) {
       pendingRef.current = { videoId, autoplay };
@@ -245,6 +257,7 @@ export function useYouTubePlayer(
     currentTime,
     duration,
     quality,
+    buffering,
     load,
     play: useCallback(() => playerRef.current?.playVideo(), []),
     pause: useCallback(() => playerRef.current?.pauseVideo(), []),

@@ -31,6 +31,8 @@ export interface CatalogPlayerApi {
   qualityLabel: string;
   /** True when playback dropped below 480p. */
   lowQuality: boolean;
+  /** True while a new track is being fetched or is still buffering. */
+  busy: boolean;
   toggle: () => void;
   next: () => void;
   prev: () => void;
@@ -48,6 +50,7 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolumeState] = useState(0.85);
   const [muted, setMuted] = useState(false);
+  const [switching, setSwitching] = useState(false);
 
   /** Most-recent-first history, used to avoid repeats. */
   const recentRef = useRef<string[]>([]);
@@ -66,6 +69,7 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
 
   const goNext = useCallback(() => {
     void (async () => {
+      setSwitching(true);
       try {
         // Ask the server to skip anything this session already found unplayable.
         const avoid = [...recentRef.current, ...blockedRef.current];
@@ -77,6 +81,8 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
         if (track.youtube) yt.load(track.youtube.videoId, true);
       } catch (e) {
         setError(e instanceof ApiError ? e.message : "Could not load the next song.");
+      } finally {
+        setSwitching(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -240,6 +246,7 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
     ready: yt.ready,
     quality: yt.quality,
     qualityLabel: QUALITY_LABEL[yt.quality] ?? "",
+    busy: switching || yt.buffering,
     lowQuality:
       Boolean(yt.quality) &&
       QUALITY_ORDER.indexOf(yt.quality as (typeof QUALITY_ORDER)[number]) <
