@@ -21,7 +21,6 @@ export default function PlayerShell() {
   const [bootHeld, setBootHeld] = useState(true);
   const [videoOn, setVideoOn] = useState(false); // video hidden by default
   const [locked, setLocked] = useState(false);
-  const [videoBg, setVideoBg] = useState(false);
 
   // Focus mode: hide every control and leave just the cover or the video.
   useEffect(() => {
@@ -64,16 +63,14 @@ export default function PlayerShell() {
           YouTube frame is dead air, so the cover comes back over it. */}
       <Background
         cover={p.current?.cover ?? ""}
-        hidden={videoOn && videoBg && p.playing}
+        hidden={videoOn && p.playing}
       />
       <TopBar
         videoOn={videoOn}
         onToggleVideo={() => {
           // Turning the video on also switches the backdrop to it; the
           // "Cover BG" button inside the panel can switch it back.
-          const next = !videoOn;
-          setVideoOn(next);
-          setVideoBg(next);
+          setVideoOn((v) => !v);
         }}
       />
       <Hero docked={videoOn} />
@@ -97,13 +94,11 @@ export default function PlayerShell() {
         </div>
       )}
 
-      <VideoPanel
-        containerId={PLAYER_ID}
-        visible={videoOn}
-        asBackground={videoOn && videoBg}
-        onToggleBackground={() => setVideoBg((v) => !v)}
-        title={p.current?.title ?? ""}
-      />
+      <VideoPanel containerId={PLAYER_ID} visible={videoOn} />
+
+      <div className="f11hint">
+        Press <kbd>F11</kbd> for full immersion
+      </div>
 
       <button
         className={`lockbtn${locked ? " on" : ""}`}

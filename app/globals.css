@@ -110,6 +110,9 @@ button { font-family: inherit; }
   transition-duration: .62s;
 }
 .hero--docked .hero__logo {
+  /* logoIn uses fill-mode:both, whose final opacity would otherwise beat any
+     declarative value here (and the mobile rule that hides this). */
+  animation: none;
   transform: scale(.135);
   transition-delay: 0s;           /* shrink happens first */
   transition-duration: .34s;
@@ -313,44 +316,6 @@ button { font-family: inherit; }
    playing. It may be moved or used as the background, but never hidden. */
 .vid { position: fixed; }
 
-.vid--panel {
-  z-index: 8; border-radius: 14px; overflow: hidden;
-  background: rgba(10,10,14,.82);
-  border: 1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 24px 60px -18px rgba(0,0,0,.9);
-}
-.vid--dragging { user-select: none; }
-.vid--dragging iframe { pointer-events: none; }
-
-.vid__grip {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 10px; cursor: grab; touch-action: none;
-  background: rgba(255,255,255,.06);
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-.vid--dragging .vid__grip { cursor: grabbing; }
-.vid__dots { color: rgba(255,255,255,.4); font-size: 13px; line-height: 1; }
-.vid__title {
-  flex: 1; min-width: 0; font-size: 11px; color: rgba(255,255,255,.6);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
-}
-
-.vid__frame { position: relative; aspect-ratio: 16 / 9; background: #000; }
-.vid__frame > div, .vid__frame iframe {
-  position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
-}
-
-.vid__mode {
-  position: absolute; right: 8px; bottom: 8px; z-index: 2;
-  background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.18);
-  color: #fff; font-size: 10px; font-weight: 600; letter-spacing: .04em;
-  padding: 4px 9px; border-radius: 999px; cursor: pointer;
-  opacity: 0; transition: opacity .2s ease, background .2s ease;
-}
-.vid:hover .vid__mode { opacity: 1; }
-.vid__mode:hover { background: rgba(0,0,0,.85); }
-
 /* video-as-background mode */
 .vid--bg { inset: 0; z-index: 0; overflow: hidden; background: #000; }
 .bg--off { transition: opacity .55s ease; }
@@ -364,7 +329,7 @@ button { font-family: inherit; }
   pointer-events: none;
 }
 .vid--bg .vid__frame iframe { pointer-events: none; }
-.vid--bg .vid__mode { right: 22px; bottom: 22px; opacity: .75; }
+.vid--bg 
 .vid--bg::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(180deg, rgba(4,4,8,.55) 0%, rgba(4,4,8,.1) 30%,
@@ -500,7 +465,6 @@ button { font-family: inherit; }
   .boot__disclaimer { font-size: 10px; max-width: 300px; line-height: 1.7; }
 }
 
-
 /* ============================ Focus (lock) mode ============================ */
 .lockbtn {
   position: fixed; z-index: 9; right: 22px; bottom: 26px;
@@ -521,7 +485,7 @@ button { font-family: inherit; }
 .ui-locked .player,
 .ui-locked .queue,
 .ui-locked .notice,
-.ui-locked .vid--panel {
+.ui-locked .vid--off {
   opacity: 0 !important;
   pointer-events: none !important;
   transition: opacity .45s ease;
@@ -549,7 +513,10 @@ button { font-family: inherit; }
 
   .hero { padding-bottom: 30vh; }
   .hero__logo { width: min(52vw, 190px); }
-  .hero--docked .hero__travel { transform: translateY(calc(26px - 35vh)); }
+  /* top bar is full on a phone (clock + toggle + two links) — the docked
+     mark would land on top of them, so it simply steps out. */
+  .hero--docked .hero__logo { opacity: 0; }
+  .hero--docked .hero__travel { transform: none; }
 
   /* pill: full-bleed, two rows so the title has room */
   .player {
@@ -578,13 +545,6 @@ button { font-family: inherit; }
   .track__title { font-size: 13px; }
   .track__sub { font-size: 11px; }
 
-  /* the draggable panel would swamp a phone — pin it, still visible */
-  .vid--panel {
-    left: 10px !important; right: 10px; top: auto !important;
-    bottom: 112px; width: auto !important;
-  }
-  .vid__grip { padding: 6px 9px; }
-
   .lockbtn {
     right: 12px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 92px);
     padding: 6px 10px 6px 8px;
@@ -604,5 +564,32 @@ button { font-family: inherit; }
 @media (max-height: 460px) {
   .hero { padding-bottom: 34vh; }
   .hero__logo { width: min(28vw, 140px); }
-  .vid--panel { bottom: 96px; }
 }
+
+
+/* ============================ Fullscreen hint ============================ */
+.f11hint {
+  position: fixed; z-index: 8; left: 22px; bottom: 26px;
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10px; font-weight: 500; letter-spacing: .06em;
+  color: rgba(255,255,255,.32);
+  background: rgba(14,14,18,.4); border: 1px solid rgba(255,255,255,.08);
+  padding: 6px 11px; border-radius: 999px;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  pointer-events: none;
+  animation: hintIn 1s ease 1.4s both;
+  transition: color .3s ease, opacity .3s ease;
+}
+.f11hint kbd {
+  font: inherit; font-weight: 700; letter-spacing: .04em;
+  color: #fff;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.22);
+  border-bottom-width: 2px;
+  padding: 1.5px 6px; border-radius: 5px;
+}
+@keyframes hintIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ui-locked .f11hint { opacity: 0; }
+
+/* F11 is a desktop affordance — no place for it on a phone */
+@media (max-width: 560px) { .f11hint { display: none; } }
