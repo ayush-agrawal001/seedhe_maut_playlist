@@ -7,6 +7,19 @@ const ACCOUNTS = "https://accounts.spotify.com/api/token";
 const API = "https://api.spotify.com/v1";
 const TOKEN_KEY = "spotify:token";
 
+/**
+ * Request budget.
+ *
+ * Development-mode apps have a very low rate limit, and every serverless cold
+ * start rebuilds the catalogue — so an unbounded crawl reliably ends in
+ * 429 QUOTA_EXCEEDED. These caps keep a full build to roughly 30 calls.
+ */
+const MAX_ALBUM_PAGES = 6;   // page size is forced to ~5 => ~30 albums
+const MAX_ALBUM_FETCH = 24;  // individual /albums/{id} calls
+const PACE_MS = 120;         // gap between calls
+
+const pace = () => new Promise((r) => setTimeout(r, PACE_MS));
+
 /* ----------------------------- Upstream types ---------------------------- */
 
 interface SpImage {
@@ -180,10 +193,16 @@ export async function getSpotifyCatalog(): Promise<SpotifyCatalog> {
 
     let offset = 0;
     let total = Infinity;
-    for (let page = 0; page < 40 && offset < total; page++) {
-      const res: { items: SpAlbum[]; total: number } = await spFetch(
-        `${base}&offset=${offset}`
-      );
+    for (let page = 0; page < MAX_ALBUM_PAGES && offset < total; page++) {
+      let res: { items: SpAlbum[]; total: number };
+      try {
+        res = await spFetch(`${base}&offset=${offset}`);
+      } catch (e) {
+        // Rate limited / transient: keep whatever we already have rather than
+        // losing the whole catalogue.
+        console.warn(`[spotify] album page at offset ${offset} failed:`, (e as Error).message);
+        break;
+      }
       total = res.total ?? 0;
       const items = res.items ?? [];
       if (!items.length) break;
@@ -195,6 +214,10 @@ export async function getSpotifyCatalog(): Promise<SpotifyCatalog> {
         }
       }
       offset += items.length;
+      await pace();
+    }
+    if (!albums.length) {
+      throw new UpstreamError("spotify", 429, "No albums could be fetched (rate limited?).");
     }
 
     // 2. De-duplicate regional re-releases by normalized name, keep earliest.
@@ -212,15 +235,20 @@ export async function getSpotifyCatalog(): Promise<SpotifyCatalog> {
     // albums are fetched one at a time. The 6h catalogue cache keeps this to a
     // single burst per cold start.
     const full: SpAlbumFull[] = [];
-    for (const a of unique.slice(0, 60)) {
+    let failures = 0;
+    for (const a of unique.slice(0, MAX_ALBUM_FETCH)) {
       try {
         full.push(
           await spFetch<SpAlbumFull>(`/albums/${a.id}?market=${env.spotify.market}`)
         );
+        failures = 0;
       } catch (e) {
-        // One unavailable album shouldn't sink the whole catalogue.
+        // One unavailable album shouldn't sink the catalogue, but a run of
+        // them means we are rate limited — stop and keep what we have.
         console.warn(`[spotify] album ${a.id} failed:`, (e as Error).message);
+        if (++failures >= 3) break;
       }
+      await pace();
     }
 
     return {

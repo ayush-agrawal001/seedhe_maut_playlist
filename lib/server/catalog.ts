@@ -173,18 +173,29 @@ export async function getCatalog(): Promise<Catalog> {
         if (usedVideoIds.has(v.videoId)) continue; // already backing a Spotify track
         if (!looksLikeSong(v.title, v.durationSec)) continue;
         usedVideoIds.add(v.videoId);
-        // Real album artwork beats a video still for the backdrop.
+
+        // Artwork must actually belong to this song. A local sleeve is only
+        // used when the title names its album; otherwise we fall back to the
+        // video's own thumbnail, which is correct by construction. Guessing a
+        // sleeve looks nicer but pairs songs with the wrong cover.
         const art = pickLocalCover(v.title, v.videoId);
+        const cover = art.exact
+          ? art.cover
+          : `https://i.ytimg.com/vi/${v.videoId}/maxresdefault.jpg`;
+        const coverSmall = art.exact
+          ? art.cover
+          : `https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`;
+
         tracks.push({
           id: `yt:${v.videoId}`,
           title: cleanYtTitle(v.title),
           artists: env.artistName,
-          album: art.album,
+          album: art.exact ? art.album : "Single",
           albumId: "youtube",
           year: Number.parseInt(v.publishedAt.slice(0, 4), 10) || 0,
           durationMs: v.durationSec * 1000,
-          cover: art.cover,
-          coverSmall: art.cover,
+          cover,
+          coverSmall,
           explicit: false,
           popularity: null,
           spotify: null,

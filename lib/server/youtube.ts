@@ -68,6 +68,11 @@ function score(trackTitle: string, videoTitle: string): number {
   const b = slug(videoTitle);
   if (!a || !b) return 0;
   if (a === b) return 1;
+
+  // Short titles ("Red", "101", "MMM") are far too easy to match by prefix or
+  // substring — "red" would happily claim "Redemption". Demand an exact hit.
+  if (a.length < 5) return 0;
+
   if (b.startsWith(a) || a.startsWith(b)) return 0.9;
   if (b.includes(a)) return 0.8;
 
