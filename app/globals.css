@@ -316,6 +316,13 @@ button { font-family: inherit; }
    playing. It may be moved or used as the background, but never hidden. */
 .vid { position: fixed; }
 
+/* the API swaps the inner <div> for an <iframe>; both must fill the frame */
+.vid__frame { position: relative; aspect-ratio: 16 / 9; background: #000; }
+.vid__frame > div,
+.vid__frame iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+}
+
 /* video-as-background mode */
 .vid--bg { inset: 0; z-index: 0; overflow: hidden; background: #000; }
 .bg--off { transition: opacity .55s ease; }
@@ -329,7 +336,6 @@ button { font-family: inherit; }
   pointer-events: none;
 }
 .vid--bg .vid__frame iframe { pointer-events: none; }
-.vid--bg 
 .vid--bg::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(180deg, rgba(4,4,8,.55) 0%, rgba(4,4,8,.1) 30%,

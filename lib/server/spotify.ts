@@ -168,15 +168,33 @@ export async function getSpotifyCatalog(): Promise<SpotifyCatalog> {
   return cached("spotify:catalog", env.cache.ttl, async () => {
     const artist = await resolveArtistId();
 
-    // 1. Enumerate albums + singles (paged, 50 at a time).
+    // 1. Enumerate albums + singles.
+    //
+    // NOTE: apps in Spotify's development mode reject an explicit `limit`
+    // ("400 Invalid limit") and force a small page size, so we omit it and
+    // walk `offset` ourselves rather than following the `next` URL (which
+    // carries a `limit` and would 400).
     const albums: SpAlbum[] = [];
-    let next: string | null =
-      `/artists/${artist.id}/albums?include_groups=album,single&limit=50&market=${env.spotify.market}`;
+    const seen = new Set<string>();
+    const base = `/artists/${artist.id}/albums?include_groups=album,single&market=${env.spotify.market}`;
 
-    while (next && albums.length < 300) {
-      const page: { items: SpAlbum[]; next: string | null } = await spFetch(next);
-      albums.push(...page.items);
-      next = page.next ? page.next.replace(API, "") : null;
+    let offset = 0;
+    let total = Infinity;
+    for (let page = 0; page < 40 && offset < total; page++) {
+      const res: { items: SpAlbum[]; total: number } = await spFetch(
+        `${base}&offset=${offset}`
+      );
+      total = res.total ?? 0;
+      const items = res.items ?? [];
+      if (!items.length) break;
+
+      for (const a of items) {
+        if (!seen.has(a.id)) {
+          seen.add(a.id);
+          albums.push(a);
+        }
+      }
+      offset += items.length;
     }
 
     // 2. De-duplicate regional re-releases by normalized name, keep earliest.
@@ -188,14 +206,21 @@ export async function getSpotifyCatalog(): Promise<SpotifyCatalog> {
     }
     const unique = [...byName.values()];
 
-    // 3. Batch-fetch full albums (20 ids per request) to get their tracks.
+    // 3. Fetch each album's tracks.
+    //
+    // The batch endpoint (/albums?ids=…) is 403 for development-mode apps, so
+    // albums are fetched one at a time. The 6h catalogue cache keeps this to a
+    // single burst per cold start.
     const full: SpAlbumFull[] = [];
-    for (let i = 0; i < unique.length; i += 20) {
-      const ids = unique.slice(i, i + 20).map((a) => a.id).join(",");
-      const data = await spFetch<{ albums: SpAlbumFull[] }>(
-        `/albums?ids=${ids}&market=${env.spotify.market}`
-      );
-      full.push(...data.albums.filter(Boolean));
+    for (const a of unique.slice(0, 60)) {
+      try {
+        full.push(
+          await spFetch<SpAlbumFull>(`/albums/${a.id}?market=${env.spotify.market}`)
+        );
+      } catch (e) {
+        // One unavailable album shouldn't sink the whole catalogue.
+        console.warn(`[spotify] album ${a.id} failed:`, (e as Error).message);
+      }
     }
 
     return {

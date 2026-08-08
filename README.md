@@ -31,6 +31,16 @@ every endpoint returns a clean `503 not_configured`.
 Uses the **Client Credentials** flow — app-level auth only. No user login, and
 Spotify is never used for playback.
 
+> **Development-mode limits.** Until an app is quota-extended, Spotify:
+> - **403s** the batch endpoints — `/albums?ids=…`, `/artists/{id}/top-tracks`,
+>   `/artists/{id}/related-artists`
+> - **400s "Invalid limit"** on any explicit `limit` param, forcing a small page size
+> - requires the app owner to hold **Spotify Premium** (otherwise every call
+>   403s with "Active premium subscription required")
+>
+> `lib/server/spotify.ts` is written around all three: no `limit` is sent, paging
+> walks `offset` directly, and album tracks are fetched one album at a time.
+
 ### YouTube (playback ids)
 1. https://console.cloud.google.com → new project.
 2. **APIs & Services → Library →** enable **YouTube Data API v3**.
@@ -186,7 +196,7 @@ Two things to change for multi-instance / serverless production:
 | Variable | Default | Purpose |
 |---|---|---|
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | — | Required for metadata |
-| `SPOTIFY_ARTIST_ID` | `1sB4jQ…` | Skips an artist lookup |
+| `SPOTIFY_ARTIST_ID` | `2oBG74…` | Skips an artist lookup |
 | `SPOTIFY_MARKET` | `IN` | Track availability market |
 | `YOUTUBE_API_KEY` | — | Required for playback ids |
 | `YOUTUBE_CHANNEL_ID` | — | Strongly recommended (quota) |
