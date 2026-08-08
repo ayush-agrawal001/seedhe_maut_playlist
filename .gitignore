@@ -36,3 +36,5 @@ next-env.d.ts
 # personal / unrelated files that live in this folder
 *.pdf
 /images.webp
+.vercel
+.env*

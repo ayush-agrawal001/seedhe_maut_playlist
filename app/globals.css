@@ -97,14 +97,11 @@ button { font-family: inherit; }
   /* undocking: grow only after the travel has finished */
   transition:
     transform .42s cubic-bezier(.34,1.2,.5,1) .32s,
-    opacity .38s ease .62s,
+    opacity .5s ease,
     filter .5s ease;
   animation: logoIn 1.2s cubic-bezier(.2,.8,.2,1) both;
   will-change: transform;
 }
-
-/* hidden while the boot logo is still flying onto this spot */
-.hero--boot .hero__logo { opacity: 0; transition: none; }
 
 /* video on -> shrink in place first, then rise into the top bar */
 .hero--docked .hero__travel {
@@ -444,17 +441,9 @@ button { font-family: inherit; }
   position: fixed; inset: 0; z-index: 50;
   display: grid; place-items: center;
   background: radial-gradient(120% 90% at 50% 40%, #14131a 0%, #070709 60%, #050506 100%);
+  transition: opacity .7s ease, visibility .7s ease;
 }
-.boot--done {
-  background: transparent;
-  pointer-events: none;
-  transition: background .55s ease;
-}
-/* the logo stays opaque and travels; everything else clears out of its way */
-.boot--done .boot__logo { animation: none; }
-.boot--done .boot__bar,
-.boot--done .boot__msg,
-.boot--done .boot__disclaimer { opacity: 0; transition: opacity .22s ease; }
+.boot--done { opacity: 0; visibility: hidden; pointer-events: none; }
 
 .boot__inner {
   display: flex; flex-direction: column; align-items: center; gap: 22px;

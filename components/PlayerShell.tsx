@@ -60,7 +60,7 @@ export default function PlayerShell() {
           setVideoBg(next);
         }}
       />
-      <Hero docked={videoOn} booting={p.loading || bootHeld} />
+      <Hero docked={videoOn} />
 
       <LoadingScreen show={p.loading || bootHeld} />
 

@@ -1,6 +1,6 @@
-export default function Hero({ docked, booting }: { docked: boolean; booting: boolean }) {
+export default function Hero({ docked }: { docked: boolean }) {
   return (
-    <div className={`hero${docked ? " hero--docked" : ""}${booting ? " hero--boot" : ""}`}>
+    <div className={`hero${docked ? " hero--docked" : ""}`}>
       {/* Two layers so the shrink and the travel can be timed separately:
           docking = shrink first, then rise. Undocking reverses the order. */}
       <div className="hero__travel">
