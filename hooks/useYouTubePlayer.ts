@@ -81,6 +81,10 @@ export interface YouTubeApi {
   quality: string;
   /** True while the player is fetching/buffering media. */
   buffering: boolean;
+  /** The IFrame API never came up (blocked, offline, script failed). */
+  failed: boolean;
+  /** Autoplay was only allowed muted; unmute on the first user gesture. */
+  autoMuted: boolean;
   load: (videoId: string, autoplay: boolean) => void;
   play: () => void;
   pause: () => void;
@@ -132,6 +136,8 @@ export function useYouTubePlayer(
   const [duration, setDuration] = useState(0);
   const [quality, setQuality] = useState("");
   const [buffering, setBuffering] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [autoMuted, setAutoMuted] = useState(false);
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -142,8 +148,19 @@ export function useYouTubePlayer(
   useEffect(() => {
     let cancelled = false;
 
-    loadApi().then(() => {
-      if (cancelled || !window.YT?.Player) return;
+    // If the API script is blocked or the network is down, the player never
+    // reports ready — surface that instead of spinning forever.
+    const readyTimer = setTimeout(() => {
+      if (!cancelled && !playerRef.current) setFailed(true);
+    }, 15000);
+
+    loadApi().catch(() => {
+      if (!cancelled) setFailed(true);
+    }).then(() => {
+      if (cancelled || !window.YT?.Player) {
+        if (!cancelled) setFailed(true);
+        return;
+      }
       const el = document.getElementById(containerId);
       if (!el) return;
 
@@ -191,6 +208,7 @@ export function useYouTubePlayer(
               setBuffering(true);
             } else if (e.data === S.PLAYING) {
               setBuffering(false);
+              setFailed(false);
               setPlaying(true);
               try {
                 playerRef.current?.setPlaybackQuality("hd720");
@@ -213,6 +231,7 @@ export function useYouTubePlayer(
 
     return () => {
       cancelled = true;
+      clearTimeout(readyTimer);
       playerRef.current?.destroy();
       playerRef.current = null;
     };
@@ -236,6 +255,26 @@ export function useYouTubePlayer(
     return () => clearInterval(t);
   }, [playing]);
 
+  /**
+   * Browsers block autoplay with sound until the user interacts. Try it, and
+   * if nothing is playing shortly after, mute and try again — muted autoplay
+   * is permitted. `autoMuted` then tells the UI to unmute on first gesture.
+   */
+  const ensureAutoplay = useCallback(() => {
+    window.setTimeout(() => {
+      const p = playerRef.current;
+      if (!p) return;
+      try {
+        if (!p.getCurrentTime || p.getCurrentTime() > 0) return;
+        p.mute();
+        setAutoMuted(true);
+        p.playVideo();
+      } catch {
+        /* ignore */
+      }
+    }, 1200);
+  }, []);
+
   const load = useCallback((videoId: string, autoplay: boolean) => {
     setCurrentTime(0);
     setDuration(0);
@@ -247,9 +286,11 @@ export function useYouTubePlayer(
       return;
     }
     const args = { videoId, suggestedQuality: "hd720" };
-    if (autoplay) p.loadVideoById(args);
-    else p.cueVideoById(args);
-  }, []);
+    if (autoplay) {
+      p.loadVideoById(args);
+      ensureAutoplay();
+    } else p.cueVideoById(args);
+  }, [ensureAutoplay]);
 
   return {
     ready,
@@ -258,6 +299,8 @@ export function useYouTubePlayer(
     duration,
     quality,
     buffering,
+    failed,
+    autoMuted,
     load,
     play: useCallback(() => playerRef.current?.playVideo(), []),
     pause: useCallback(() => playerRef.current?.pauseVideo(), []),
@@ -267,7 +310,10 @@ export function useYouTubePlayer(
       const p = playerRef.current;
       if (!p) return;
       if (m) p.mute();
-      else p.unMute();
+      else {
+        p.unMute();
+        setAutoMuted(false);
+      }
     }, []),
   };
 }

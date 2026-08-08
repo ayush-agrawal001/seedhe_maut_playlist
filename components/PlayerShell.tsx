@@ -8,6 +8,8 @@ import Queue from "@/components/Queue";
 import Player from "@/components/Player";
 import VideoPanel from "@/components/VideoPanel";
 import LoadingScreen from "@/components/LoadingScreen";
+import ErrorScreen from "@/components/ErrorScreen";
+import MobileHint from "@/components/MobileHint";
 import { useCatalogPlayer } from "@/hooks/useCatalogPlayer";
 
 const PLAYER_ID = "yt-player";
@@ -21,6 +23,24 @@ export default function PlayerShell() {
   const [bootHeld, setBootHeld] = useState(true);
   const [videoOn, setVideoOn] = useState(true); // video on by default
   const [locked, setLocked] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // F11 has no event of its own, but it changes viewport geometry; the
+  // Fullscreen API covers the programmatic case. Watch both.
+  useEffect(() => {
+    const check = () => {
+      const api = Boolean(document.fullscreenElement);
+      const f11 = window.innerHeight >= screen.height - 2;
+      setFullscreen(api || f11);
+    };
+    check();
+    document.addEventListener("fullscreenchange", check);
+    window.addEventListener("resize", check);
+    return () => {
+      document.removeEventListener("fullscreenchange", check);
+      window.removeEventListener("resize", check);
+    };
+  }, []);
 
   // Focus mode: hide every control and leave just the cover or the video.
   useEffect(() => {
@@ -75,9 +95,19 @@ export default function PlayerShell() {
       />
       <Hero docked={videoOn} />
 
-      <LoadingScreen show={p.loading || bootHeld} />
+      <LoadingScreen show={(p.loading || bootHeld) && !p.fatalError} />
 
-      {p.error && (
+      {p.fatalError && (
+        <ErrorScreen
+          title="Something went wrong"
+          detail={p.fatalError}
+          offline={p.offline}
+          retrying={p.retrying}
+          onRetry={p.reload}
+        />
+      )}
+
+      {p.error && !p.fatalError && (
         <div className="notice notice--error" role="alert">
           {p.error}
           <button className="notice__retry" onClick={p.reload}>
@@ -96,7 +126,9 @@ export default function PlayerShell() {
 
       <VideoPanel containerId={PLAYER_ID} visible={videoOn} />
 
-      <div className="f11hint">
+      <MobileHint show={!p.loading && !bootHeld && !p.fatalError} />
+
+      <div className={`f11hint${fullscreen ? " f11hint--gone" : ""}`}>
         Press <kbd>F11</kbd> for full immersion
       </div>
 
