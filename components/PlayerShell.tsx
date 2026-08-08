@@ -19,7 +19,7 @@ export default function PlayerShell() {
   const p = useCatalogPlayer(PLAYER_ID);
   const [queueOpen, setQueueOpen] = useState(false);
   const [bootHeld, setBootHeld] = useState(true);
-  const [videoOn, setVideoOn] = useState(false); // video hidden by default
+  const [videoOn, setVideoOn] = useState(true); // video on by default
   const [locked, setLocked] = useState(false);
 
   // Focus mode: hide every control and leave just the cover or the video.

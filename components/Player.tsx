@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fmt } from "@/lib/format";
 import type { ApiTrack } from "@/lib/types";
 
@@ -40,6 +40,10 @@ export default function Player({
   onToggleQueue,
 }: Props) {
   const [drag, setDrag] = useState<number | null>(null);
+  const [artOk, setArtOk] = useState(true);
+
+  // Reset the artwork probe whenever the track changes.
+  useEffect(() => setArtOk(true), [current.cover]);
   const shown = drag ?? curTime;
   const pct = dur > 0 ? Math.min(100, (shown / dur) * 100) : 0;
 
@@ -53,13 +57,23 @@ export default function Player({
   return (
     <div className={`player${playing ? " playing" : ""}${busy ? " busy" : ""}`} id="player">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        className="player__disc"
-        src={current.cover}
-        alt={`${current.album} cover`}
-        draggable={false}
-        onClick={onToggleQueue}
-      />
+      {artOk && current.cover ? (
+        <img
+          className="player__disc"
+          src={current.cover}
+          alt={`${current.album} cover`}
+          draggable={false}
+          onClick={onToggleQueue}
+          onError={() => setArtOk(false)}
+          onLoad={(e) => {
+            // YouTube serves a 120x90 grey placeholder for missing thumbnails.
+            const i = e.currentTarget;
+            if (i.naturalWidth <= 120 && i.naturalHeight <= 90) setArtOk(false);
+          }}
+        />
+      ) : (
+        <div className="player__disc player__disc--blank" onClick={onToggleQueue} />
+      )}
 
       <div className="player__main">
         <div className="player__title" title={current.title}>

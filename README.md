@@ -120,12 +120,11 @@ restriction. Nothing but public, documented APIs.
 > the player to stay visible (at least 200x200) while media plays, and forbid
 > audio-only playback.
 >
-> The UI currently ships with the video **hidden by default** (`videoOn = false`
-> in `components/PlayerShell.tsx`), which does **not** meet that requirement —
-> the player stays mounted off-screen so audio keeps running. This is fine for
-> local/personal use, but before putting the site on a public domain either
-> default `videoOn` to `true`, or remove the hidden state so the draggable
-> panel is always shown.
+> The UI ships with the video **on by default** (`videoOn = true` in
+> `components/PlayerShell.tsx`), which satisfies this. Turning the toggle off
+> keeps the player mounted but off-screen so audio continues — that state does
+> **not** meet the requirement, so treat it as a user-chosen convenience rather
+> than the shipped default.
 
 ---
 

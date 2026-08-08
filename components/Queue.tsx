@@ -42,7 +42,14 @@ export default function Queue({ open, tracks, activeId, playing, onSelect }: Pro
                 <span />
               </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="track__art" src={t.cover} alt="" />
+              <img
+                className="track__art"
+                src={t.cover}
+                alt=""
+                onError={(e) => {
+                  e.currentTarget.style.visibility = "hidden";
+                }}
+              />
               <div className="track__body">
                 <div className="track__title">{t.title}</div>
                 <div className="track__sub">
