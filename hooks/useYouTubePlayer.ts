@@ -93,12 +93,35 @@ export interface YouTubeApi {
  * The player element must stay visible — the YouTube API Terms of Service do
  * not permit hiding or obscuring it, or playing audio without the video.
  */
+/**
+ * IFrame API error codes.
+ *   2   bad parameter
+ *   5   HTML5 player error
+ *   100 video removed / private
+ *   101 embedding disabled by the owner
+ *   150 same as 101 (owner disallows embedding on other sites)
+ *
+ * 101/150 are the common ones for official music videos: the API reports
+ * `embeddable: true` yet the owner still blocks playback off youtube.com, and
+ * that block can differ by referring domain — which is why a track can play on
+ * localhost and fail on a deployed origin.
+ */
+export const YT_ERROR_TEXT: Record<number, string> = {
+  2: "Invalid video parameter",
+  5: "Player error",
+  100: "Video is unavailable",
+  101: "Owner disabled embedding",
+  150: "Owner disabled embedding",
+};
+
 export function useYouTubePlayer(
   containerId: string,
-  onEnded: () => void
+  onEnded: () => void,
+  onError?: (code: number) => void
 ): YouTubeApi {
   const playerRef = useRef<YTPlayer | null>(null);
   const onEndedRef = useRef(onEnded);
+  const onErrorRef = useRef(onError);
   const pendingRef = useRef<{ videoId: string; autoplay: boolean } | null>(null);
 
   const [ready, setReady] = useState(false);
@@ -109,7 +132,8 @@ export function useYouTubePlayer(
 
   useEffect(() => {
     onEndedRef.current = onEnded;
-  }, [onEnded]);
+    onErrorRef.current = onError;
+  }, [onEnded, onError]);
 
   // Create the player once the API and the container element both exist.
   useEffect(() => {
@@ -167,6 +191,10 @@ export function useYouTubePlayer(
                 /* ignore */
               }
             } else if (e.data === S.PAUSED) setPlaying(false);
+          },
+          onError: (e: { data: number }) => {
+            setPlaying(false);
+            onErrorRef.current?.(e.data);
           },
         },
       });

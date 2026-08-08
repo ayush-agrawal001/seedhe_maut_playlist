@@ -499,3 +499,110 @@ button { font-family: inherit; }
 @media (max-width: 620px) {
   .boot__disclaimer { font-size: 10px; max-width: 300px; line-height: 1.7; }
 }
+
+
+/* ============================ Focus (lock) mode ============================ */
+.lockbtn {
+  position: fixed; z-index: 9; right: 22px; bottom: 26px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px 7px 9px; border-radius: 999px; cursor: pointer;
+  font-size: 10px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+  background: rgba(14,14,18,.55); border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  transition: opacity .35s ease, color .2s ease, background .2s ease;
+}
+.lockbtn svg { width: 13px; height: 13px; stroke-width: 1.8; }
+.lockbtn:hover { color: #fff; background: rgba(26,26,32,.75); }
+
+/* everything except the backdrop steps aside */
+.ui-locked .topbar,
+.ui-locked .hero,
+.ui-locked .player,
+.ui-locked .queue,
+.ui-locked .notice,
+.ui-locked .vid--panel {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity .45s ease;
+}
+/* the lock button itself stays, but recedes until you reach for it */
+.ui-locked .lockbtn { opacity: .12; }
+.ui-locked .lockbtn:hover,
+.ui-locked .lockbtn:focus-visible { opacity: 1; }
+
+/* ============================ Mobile ============================ */
+@media (max-width: 560px) {
+  .topbar {
+    padding: max(12px, env(safe-area-inset-top)) 14px 12px;
+    font-size: 11px;
+  }
+  .topbar__clock { font-size: 11px; }
+  .topbar__links { gap: 10px; }
+  .tlink { font-size: 10.5px; gap: 4px; }
+  .tlink__badge { width: 13px; height: 13px; }
+  .tlink__badge svg { width: 9px; height: 9px; }
+  .vtoggle { font-size: 8.5px; padding: 3px 4px 3px 8px; gap: 5px; }
+  .vtoggle__track { width: 22px; height: 13px; }
+  .vtoggle__thumb { width: 9px; height: 9px; }
+  .vtoggle.on .vtoggle__thumb { transform: translateX(9px); }
+
+  .hero { padding-bottom: 30vh; }
+  .hero__logo { width: min(52vw, 190px); }
+  .hero--docked .hero__travel { transform: translateY(calc(26px - 35vh)); }
+
+  /* pill: full-bleed, two rows so the title has room */
+  .player {
+    left: 10px; right: 10px; bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto; transform: none;
+    gap: 11px; padding: 9px 12px 9px 9px; border-radius: 22px;
+  }
+  .player__disc { width: 46px; height: 46px; }
+  .player__title { font-size: 13px; }
+  .player__artist { font-size: 10.5px; }
+  .player__time { font-size: 9.5px; margin-top: 3px; }
+  .player__seekrow { margin-top: 6px; }
+  .player__controls { gap: 0; }
+  .pctl { width: 40px; height: 40px; padding: 11px; }   /* touch target */
+  .pctl--play { width: 44px; height: 44px; margin: 0 1px; }
+  .pctl--play svg { width: 17px; height: 17px; }
+  .player__extra { display: none; }
+
+  .queue {
+    left: 10px; right: 10px; width: auto; transform: translateY(14px);
+    bottom: 108px; max-height: 46vh; border-radius: 18px;
+  }
+  .queue.open { transform: translateY(0); }
+  .track { grid-template-columns: 20px 36px 1fr auto; gap: 9px; }
+  .track__art { width: 36px; height: 36px; }
+  .track__title { font-size: 13px; }
+  .track__sub { font-size: 11px; }
+
+  /* the draggable panel would swamp a phone — pin it, still visible */
+  .vid--panel {
+    left: 10px !important; right: 10px; top: auto !important;
+    bottom: 112px; width: auto !important;
+  }
+  .vid__grip { padding: 6px 9px; }
+
+  .lockbtn {
+    right: 12px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 92px);
+    padding: 6px 10px 6px 8px;
+  }
+  .lockbtn__label { display: none; }
+
+  .notice { left: 10px; right: 10px; transform: none; max-width: none;
+            font-size: 11px; bottom: 104px; border-radius: 16px; }
+  .notice--warn { bottom: 150px; }
+
+  .boot__logo { width: min(48vw, 170px); }
+  .boot__bar { width: 130px; }
+  .boot__msg { font-size: 9px; letter-spacing: .26em; }
+}
+
+/* very short viewports (landscape phones) */
+@media (max-height: 460px) {
+  .hero { padding-bottom: 34vh; }
+  .hero__logo { width: min(28vw, 140px); }
+  .vid--panel { bottom: 96px; }
+}

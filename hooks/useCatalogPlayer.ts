@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, fetchRandom, fetchTracks } from "@/lib/api";
 import type { ApiTrack } from "@/lib/types";
-import { MIN_GOOD_QUALITY, QUALITY_LABEL, QUALITY_ORDER, useYouTubePlayer } from "./useYouTubePlayer";
+import {
+  MIN_GOOD_QUALITY,
+  QUALITY_LABEL,
+  QUALITY_ORDER,
+  YT_ERROR_TEXT,
+  useYouTubePlayer,
+} from "./useYouTubePlayer";
 
 /** How many recent tracks to avoid when drawing a random song. */
 const RECENT_MEMORY = 10;
@@ -46,6 +52,10 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
   /** Most-recent-first history, used to avoid repeats. */
   const recentRef = useRef<string[]>([]);
   const historyRef = useRef<ApiTrack[]>([]);
+  /** Videos the embed refused; kept out of future draws for this session. */
+  const blockedRef = useRef<Set<string>>(new Set());
+  const consecutiveErrorsRef = useRef(0);
+  const currentRef = useRef<ApiTrack | null>(null);
 
   const remember = (t: ApiTrack) => {
     recentRef.current = [t.id, ...recentRef.current.filter((id) => id !== t.id)].slice(
@@ -57,9 +67,12 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
   const goNext = useCallback(() => {
     void (async () => {
       try {
-        const { track } = await fetchRandom(recentRef.current);
+        // Ask the server to skip anything this session already found unplayable.
+        const avoid = [...recentRef.current, ...blockedRef.current];
+        const { track } = await fetchRandom(avoid);
         remember(track);
         historyRef.current = [track, ...historyRef.current].slice(0, 50);
+        currentRef.current = track;
         setCurrent(track);
         if (track.youtube) yt.load(track.youtube.videoId, true);
       } catch (e) {
@@ -69,7 +82,29 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const yt = useYouTubePlayer(playerContainerId, goNext);
+  /**
+   * A video the embed refuses (commonly 101/150 — owner blocks off-site
+   * playback, which can vary by domain). Remember it and move on rather than
+   * stranding the user on a dead track.
+   */
+  const handlePlaybackError = useCallback((code: number) => {
+    const t = currentRef.current;
+    if (t) blockedRef.current.add(t.id);
+    consecutiveErrorsRef.current += 1;
+
+    if (consecutiveErrorsRef.current >= 6) {
+      setError(
+        `Several videos in a row could not be embedded (${YT_ERROR_TEXT[code] ?? `error ${code}`}). ` +
+          "This is usually a YouTube restriction on this domain."
+      );
+      return;
+    }
+    setError(null);
+    goNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const yt = useYouTubePlayer(playerContainerId, goNext, handlePlaybackError);
 
   /* ------------------------------ initial load --------------------------- */
   const load = useCallback(() => {
@@ -100,6 +135,7 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
           setTimeout(done, 6000); // never block the UI on a slow image
         });
 
+        currentRef.current = track;
         setCurrent(track);
         // Cue (not autoplay) — browsers block sound before a user gesture.
         if (track.youtube) yt.load(track.youtube.videoId, false);
@@ -128,6 +164,7 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
     (t: ApiTrack) => {
       remember(t);
       historyRef.current = [t, ...historyRef.current].slice(0, 50);
+      currentRef.current = t;
       setCurrent(t);
       if (t.youtube) yt.load(t.youtube.videoId, true);
     },
@@ -168,6 +205,11 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
       return !m;
     });
   }, [yt]);
+
+  // A successful play means the run of failures is over.
+  useEffect(() => {
+    if (yt.playing) consecutiveErrorsRef.current = 0;
+  }, [yt.playing]);
 
   // Keyboard shortcuts
   useEffect(() => {

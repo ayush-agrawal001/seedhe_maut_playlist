@@ -20,7 +20,23 @@ export default function PlayerShell() {
   const [queueOpen, setQueueOpen] = useState(false);
   const [bootHeld, setBootHeld] = useState(true);
   const [videoOn, setVideoOn] = useState(false); // video hidden by default
+  const [locked, setLocked] = useState(false);
   const [videoBg, setVideoBg] = useState(false);
+
+  // Focus mode: hide every control and leave just the cover or the video.
+  useEffect(() => {
+    document.documentElement.classList.toggle("ui-locked", locked);
+    return () => document.documentElement.classList.remove("ui-locked");
+  }, [locked]);
+
+  useEffect(() => {
+    if (!locked) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLocked(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [locked]);
 
   // Hold the boot screen for a minimum dwell even if the catalogue is cached.
   useEffect(() => {
@@ -88,6 +104,24 @@ export default function PlayerShell() {
         onToggleBackground={() => setVideoBg((v) => !v)}
         title={p.current?.title ?? ""}
       />
+
+      <button
+        className={`lockbtn${locked ? " on" : ""}`}
+        onClick={() => setLocked((v) => !v)}
+        title={locked ? "Exit focus mode (Esc)" : "Focus mode — hide all controls"}
+        aria-pressed={locked}
+      >
+        {locked ? (
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M7 10V7a5 5 0 019.6-2M6 10h12v10H6z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M8 10V7a4 4 0 018 0v3M6 10h12v10H6z" />
+          </svg>
+        )}
+        <span className="lockbtn__label">{locked ? "Exit" : "Focus"}</span>
+      </button>
 
       <Queue
         open={queueOpen}
