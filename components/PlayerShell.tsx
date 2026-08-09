@@ -25,6 +25,12 @@ export default function PlayerShell() {
   const [locked, setLocked] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
+  // The player is a fixed full-screen surface; the content pages are not.
+  useEffect(() => {
+    document.body.classList.add("app-locked");
+    return () => document.body.classList.remove("app-locked");
+  }, []);
+
   // F11 has no event of its own, but it changes viewport geometry; the
   // Fullscreen API covers the programmatic case. Watch both.
   useEffect(() => {
