@@ -52,8 +52,13 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  // Paste the token from Google Search Console here once the property is added.
-  // verification: { google: "…" },
+  verification: {
+    // Note: this is the DNS TXT token. Google issues a *different* token for
+    // its HTML-tag method, so this tag is a harmless extra signal rather than
+    // a working second verification path — the TXT record on Vercel DNS is
+    // what actually verifies the property.
+    google: "sfbSVf9gEh6MYdTljybBGAJkZG367JG3XzM0GQpKuz4",
+  },
 };
 
 export const viewport: Viewport = {
