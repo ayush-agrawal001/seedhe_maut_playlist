@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   keywords: [...KEYWORDS],
   applicationName: SITE.name,
-  authors: [{ name: "Ayush Agrawal" }],
+  authors: [{ name: "Ayush Agrawal", url: "https://x.com/bunnyTheRobo001" }],
   creator: "Ayush Agrawal",
   category: "music",
   alternates: {
@@ -36,6 +36,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    creator: "@bunnyTheRobo001",
     title: "Seedhe Maut Player — plays only Seedhe Maut",
     description:
       "Hit play and get a random Seedhe Maut track, full screen, no feed and no algorithm.",

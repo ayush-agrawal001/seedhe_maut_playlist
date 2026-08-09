@@ -5,7 +5,7 @@ export const SITE = {
   name: "Seedhe Maut Player",
   shortName: "Seedhe Maut",
   locale: "en_IN",
-  twitter: "@ayushagrawal001",
+  twitter: "@bunnyTheRobo001",
 } as const;
 
 export const ARTIST = {

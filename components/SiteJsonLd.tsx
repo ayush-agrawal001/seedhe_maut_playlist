@@ -48,7 +48,13 @@ export default function SiteJsonLd() {
       "@type": "Person",
       "@id": abs("/#person"),
       name: "Ayush Agrawal",
+      alternateName: "bunnyTheRobo",
       url: SITE.url,
+      sameAs: [
+        "https://x.com/bunnyTheRobo001",
+        "https://www.instagram.com/bunnytherobo",
+        "https://github.com/ayush-agrawal001",
+      ],
     },
   ];
 

@@ -851,3 +851,53 @@ button { font-family: inherit; }
   .doc__table th, .doc__table td { padding: 9px 8px; font-size: 13px; }
   .doc__table thead th:nth-child(3), .doc__table tbody td:nth-child(3) { display: none; }
 }
+
+/* ============================ Made-by credit ============================ */
+/* .hero is pointer-events:none so it never blocks the player — the credit has
+   to opt back in to be clickable. */
+.madeby {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 30px;
+  pointer-events: auto;
+  font-size: 11.5px; letter-spacing: .02em;
+  animation: madebyIn 1s ease .9s both;
+  transition: opacity .35s ease;
+}
+@keyframes madebyIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.madeby__label {
+  color: rgba(255,255,255,.34);
+  text-transform: uppercase; letter-spacing: .16em; font-size: 9.5px; font-weight: 600;
+}
+.madeby__dot { color: rgba(255,255,255,.22); }
+
+.madeby__link {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: rgba(255,255,255,.55); text-decoration: none; font-weight: 500;
+  text-shadow: 0 1px 5px rgba(0,0,0,.6);
+  transition: color .2s ease, transform .2s ease;
+}
+.madeby__link:hover { color: #fff; transform: translateY(-1px); }
+.madeby__link svg {
+  width: 12px; height: 12px; flex: none;
+  stroke: currentColor; stroke-width: 1.7; fill: none;
+}
+
+/* The logo flies to the top bar when the video is on — the credit goes with it.
+   `animation: none` is mandatory here: madebyIn uses fill-mode:both, so its
+   final opacity:1 outranks any declarative opacity. Same trap as .hero__logo
+   and .f11hint — any animated element that later needs hiding must clear its
+   animation first. */
+.hero--docked .madeby,
+.ui-locked .madeby {
+  animation: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 560px) {
+  .madeby { margin-top: 22px; gap: 7px; font-size: 10.5px; }
+  .madeby__label { display: none; }
+  .madeby__link svg { width: 11px; height: 11px; }
+}
