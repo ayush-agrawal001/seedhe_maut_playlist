@@ -10,6 +10,7 @@ import VideoPanel from "@/components/VideoPanel";
 import LoadingScreen from "@/components/LoadingScreen";
 import ErrorScreen from "@/components/ErrorScreen";
 import MobileHint from "@/components/MobileHint";
+import MadeBy from "@/components/MadeBy";
 import { useCatalogPlayer } from "@/hooks/useCatalogPlayer";
 
 const PLAYER_ID = "yt-player";
@@ -198,6 +199,8 @@ export default function PlayerShell() {
           onToggleQueue={() => setQueueOpen((o) => !o)}
         />
       )}
+
+      <MadeBy />
     </>
   );
 }
