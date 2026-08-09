@@ -21,9 +21,33 @@ const DEGRADED_TTL = 180;
 
 const ytUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 
-/** Titles that are clearly not songs on an artist channel. */
-const NOT_A_SONG =
-  /\b(trailer|teaser|snippet|promo|announce\w*|out\s+now|vlog|interview|podcast|episode|ep\.?\s*\d|behind\s+the\s+scenes|bts|making\s+of|documentary|docu|recap|reaction|tour\s+(diary|recap)|live\s+(at|in|from)|concert|full\s+set|highlights|q\s*&\s*a|shorts?|merch|giveaway|unboxing|freestyle\s+session)\b/i;
+/**
+ * Titles that are clearly not songs on an artist channel.
+ *
+ * Built from what actually leaked through: tour vlogs, the "10 YEARS OF"
+ * anniversary cut, a 9-minute "philum", and a festival set.
+ */
+const NOT_A_SONG = new RegExp(
+  [
+    // promo / announcements
+    "trailer", "teaser", "snippet", "promo", "announce\\w*", "out\\s+now",
+    "pre[-\\s]?save", "coming\\s+soon", "album\\s+out",
+    // anniversaries and retrospectives
+    "\\d+\\s*years?\\s+of", "anniversar\\w*", "throwback", "rewind",
+    // long-form / non-musical
+    "vlog", "interview", "podcast", "episode", "ep\\.?\\s*\\d",
+    "behind\\s+the\\s+scenes", "bts", "making\\s+of",
+    "documentar\\w*", "docu", "philum", "short\\s*film", "recap", "reaction",
+    // touring and live
+    "tour", "weekender", "concert", "full\\s+set", "highlights",
+    "live\\s+(at|in|from|performance)", "performance\\s+at", "festival",
+    "showcase", "sound\\s*check",
+    // misc channel content
+    "q\\s*&\\s*a", "shorts?", "merch", "giveaway", "unboxing",
+    "compilation", "mashup", "medley", "full\\s+album",
+  ].map((w) => `\\b${w}\\b`).join("|"),
+  "i"
+);
 
 /**
  * Heuristic song filter for the YouTube-only fallback.
@@ -32,11 +56,26 @@ const NOT_A_SONG =
  */
 function looksLikeSong(title: string, durationSec: number): boolean {
   if (NOT_A_SONG.test(title)) return false;
-  if (durationSec > 0 && (durationSec < 80 || durationSec > 600)) return false;
-  // All-caps sloganeering (e.g. "STADIUM MAIN BHUSSI BHARDI!") is promo, not a track.
-  const letters = title.replace(/[^A-Za-z]/g, "");
+
+  // An unknown runtime means a Short or a live stream, neither of which is a
+  // track we can present honestly.
+  if (durationSec <= 0) return false;
+  if (durationSec < 80 || durationSec > 600) return false;
+
+  // All-caps sloganeering ("STADIUM MAIN BHUSSI BHARDI!") is promo, not a
+  // track. Channel handles are stripped first — "@SeedheMaut" was supplying
+  // the lowercase that let those titles slip past.
+  const letters = title.replace(/@\S+/g, "").replace(/[^A-Za-z]/g, "");
   if (letters.length > 12 && letters === letters.toUpperCase()) return false;
+
   return true;
+}
+
+/** Comparison key for de-duplication: "Dikkat" and "DIKKAT'" are one song. */
+function songKey(title: string): string {
+  return cleanYtTitle(title)
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0900-\u097F]+/g, "");
 }
 
 /** Strip "Seedhe Maut - ", "| Official Video" etc. from a raw YouTube title. */
@@ -168,10 +207,20 @@ export async function getCatalog(): Promise<Catalog> {
           `youtube-match: only ${spotifyPlayable} Spotify tracks matched a video; added channel songs as fallback`
         );
       }
+      // Most songs exist twice on the channel (official video + lyric/audio
+      // cut). Keep the longest upload of each and drop the rest.
+      const bestPerSong = new Map<string, YtVideo>();
       for (const v of videos) {
         if (!v.embeddable) continue;
         if (usedVideoIds.has(v.videoId)) continue; // already backing a Spotify track
         if (!looksLikeSong(v.title, v.durationSec)) continue;
+        const key = songKey(v.title);
+        if (!key) continue;
+        const prev = bestPerSong.get(key);
+        if (!prev || v.durationSec > prev.durationSec) bestPerSong.set(key, v);
+      }
+
+      for (const v of bestPerSong.values()) {
         usedVideoIds.add(v.videoId);
 
         // Artwork must actually belong to this song. A local sleeve is only
