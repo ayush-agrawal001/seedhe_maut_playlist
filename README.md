@@ -53,6 +53,18 @@ Spotify is never used for playback.
 > The default free quota is 10,000 units/day, so the whole catalogue is built
 > for ~10 units instead of thousands. Search fallback is off by default.
 
+### Genius (lyrics, optional)
+1. https://genius.com/api-clients → **New API Client** (any name/URL works).
+2. Copy the **Client Access Token** into `GENIUS_ACCESS_TOKEN`.
+
+Powers the Lyrics panel via Genius's own `embed_content` — the `<div>`+`<script>`
+snippet their API hands out specifically for third-party display, the lyrics
+equivalent of YouTube's IFrame player for video. **This app never reads or
+renders raw lyric text itself** — that's copyrighted content requiring a
+publisher licence Genius holds, not something to reproduce ourselves. Leave
+this unset and the panel just says lyrics aren't configured; nothing else in
+the app depends on it.
+
 ---
 
 ## API

@@ -11,6 +11,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import ErrorScreen from "@/components/ErrorScreen";
 import MobileHint from "@/components/MobileHint";
 import MadeBy from "@/components/MadeBy";
+import LyricsPanel from "@/components/LyricsPanel";
 import { useCatalogPlayer } from "@/hooks/useCatalogPlayer";
 
 const PLAYER_ID = "yt-player";
@@ -20,7 +21,10 @@ const MIN_BOOT_MS = 5000;
 
 export default function PlayerShell() {
   const p = useCatalogPlayer(PLAYER_ID);
-  const [queueOpen, setQueueOpen] = useState(false);
+  // Queue and Lyrics share one slot above the pill — only one open at a time.
+  const [panel, setPanel] = useState<"queue" | "lyrics" | null>(null);
+  const queueOpen = panel === "queue";
+  const lyricsOpen = panel === "lyrics";
   const [bootHeld, setBootHeld] = useState(true);
   const [videoOn, setVideoOn] = useState(false); // video off by default
   const [locked, setLocked] = useState(false);
@@ -87,9 +91,10 @@ export default function PlayerShell() {
       const target = e.target as Node;
       if (
         !document.getElementById("queue")?.contains(target) &&
+        !document.getElementById("lyrics-panel")?.contains(target) &&
         !document.getElementById("player")?.contains(target)
       ) {
-        setQueueOpen(false);
+        setPanel(null);
       }
     };
     document.addEventListener("click", onDoc);
@@ -181,6 +186,14 @@ export default function PlayerShell() {
       />
 
       {p.current && (
+        <LyricsPanel
+          open={lyricsOpen}
+          title={p.current.title}
+          artist={p.current.artists}
+        />
+      )}
+
+      {p.current && (
         <Player
           current={p.current}
           playing={p.playing}
@@ -190,13 +203,15 @@ export default function PlayerShell() {
           volume={p.volume}
           muted={p.muted}
           queueOpen={queueOpen}
+          lyricsOpen={lyricsOpen}
           onToggle={p.toggle}
           onNext={p.next}
           onPrev={p.prev}
           onSeek={p.seek}
           onVolume={p.setVolume}
           onToggleMute={p.toggleMute}
-          onToggleQueue={() => setQueueOpen((o) => !o)}
+          onToggleQueue={() => setPanel((v) => (v === "queue" ? null : "queue"))}
+          onToggleLyrics={() => setPanel((v) => (v === "lyrics" ? null : "lyrics"))}
         />
       )}
 

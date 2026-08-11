@@ -258,7 +258,7 @@ button { font-family: inherit; }
   transition: max-width .3s cubic-bezier(.2,.8,.2,1), opacity .2s ease, margin-left .3s ease;
 }
 .player:hover .player__extra,
-.player:focus-within .player__extra { max-width: 170px; opacity: 1; margin-left: 6px; }
+.player:focus-within .player__extra { max-width: 210px; opacity: 1; margin-left: 6px; }
 
 .range {
   -webkit-appearance: none; appearance: none;
@@ -895,4 +895,37 @@ button { font-family: inherit; }
   .madeby { gap: 7px; font-size: 10px; bottom: max(8px, env(safe-area-inset-bottom)); }
   .madeby__label { display: none; }
   .madeby__link svg { width: 10px; height: 10px; }
+}
+
+/* ============================ Lyrics panel ============================ */
+/* Reuses .queue's positioning/blur/animation — only the content differs. */
+.lyrics-panel { display: flex; flex-direction: column; padding: 16px; }
+.lyrics__head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: rgba(255,255,255,.5); padding: 0 4px 12px;
+}
+.lyrics__head a {
+  color: rgba(255,255,255,.55); text-decoration: none;
+  font-weight: 600; letter-spacing: 0; text-transform: none; font-size: 12px;
+  transition: color .2s ease;
+}
+.lyrics__head a:hover { color: #fff; }
+
+.lyrics__status {
+  padding: 32px 12px; text-align: center;
+  font-size: 13px; color: rgba(255,255,255,.45);
+}
+
+.lyrics__embed {
+  overflow-y: auto; border-radius: 14px;
+  /* Genius's widget ships its own light-themed card — a light backing keeps
+     its text/ads legible instead of dark-on-dark. */
+  background: #fff;
+  min-height: 120px;
+}
+.lyrics__embed iframe { display: block; width: 100%; border: 0; }
+
+@media (max-width: 560px) {
+  .lyrics-panel { padding: 12px; }
 }

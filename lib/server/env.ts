@@ -42,6 +42,10 @@ export const env = {
     allowSearchFallback: str("YOUTUBE_ALLOW_SEARCH", "false") === "true",
     maxSearchFallbacks: int("YOUTUBE_MAX_SEARCH_FALLBACKS", 0),
   },
+  genius: {
+    /** Client Access Token from https://genius.com/api-clients (read-only search). */
+    accessToken: str("GENIUS_ACCESS_TOKEN"),
+  },
   artistName: str("ARTIST_NAME", "Seedhe Maut"),
   cache: {
     /** Catalog TTL in seconds. */
@@ -59,6 +63,9 @@ export const hasSpotify = (): boolean =>
   Boolean(env.spotify.clientId && env.spotify.clientSecret);
 
 export const hasYouTube = (): boolean => Boolean(env.youtube.apiKey);
+
+/** Lyrics are an optional enhancement — the app runs fine without this. */
+export const hasGenius = (): boolean => Boolean(env.genius.accessToken);
 
 /** Human-readable list of what's missing, for the /api/health endpoint. */
 export function missingConfig(): string[] {

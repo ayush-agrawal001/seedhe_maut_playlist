@@ -13,6 +13,7 @@ interface Props {
   volume: number;
   muted: boolean;
   queueOpen: boolean;
+  lyricsOpen: boolean;
   onToggle: () => void;
   onNext: () => void;
   onPrev: () => void;
@@ -20,6 +21,7 @@ interface Props {
   onVolume: (v: number) => void;
   onToggleMute: () => void;
   onToggleQueue: () => void;
+  onToggleLyrics: () => void;
 }
 
 export default function Player({
@@ -31,6 +33,7 @@ export default function Player({
   volume,
   muted,
   queueOpen,
+  lyricsOpen,
   onToggle,
   onNext,
   onPrev,
@@ -38,6 +41,7 @@ export default function Player({
   onVolume,
   onToggleMute,
   onToggleQueue,
+  onToggleLyrics,
 }: Props) {
   const [drag, setDrag] = useState<number | null>(null);
   const [artOk, setArtOk] = useState(true);
@@ -169,6 +173,17 @@ export default function Player({
             }}
             onChange={(e) => onVolume(Number(e.target.value) / 100)}
           />
+          <button
+            className={`pctl pctl--sm${lyricsOpen ? " active" : ""}`}
+            title="Lyrics"
+            aria-label="Lyrics"
+            onClick={onToggleLyrics}
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M7 4h8l4 4v12H7V4z" />
+              <path d="M15 4v4h4M9.5 12.5h5M9.5 15.5h3.5" />
+            </svg>
+          </button>
           <button
             className={`pctl pctl--sm${queueOpen ? " active" : ""}`}
             title="Queue"

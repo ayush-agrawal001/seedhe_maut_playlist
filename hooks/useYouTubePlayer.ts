@@ -138,6 +138,9 @@ export function useYouTubePlayer(
     ts: 0,
     nudgedAt: 0,
   });
+  /** True for the brief pause->play round trip below, so the PAUSED event it
+   *  causes doesn't get mistaken for a real user pause. */
+  const nudgingRef = useRef(false);
 
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -226,11 +229,12 @@ export function useYouTubePlayer(
                 /* ignore */
               }
             } else if (e.data === S.PAUSED) {
-              // A real user pause and an API-reported pause look the same
-              // here; either way we should stop trying to resume it.
-              wantPlayingRef.current = false;
               setBuffering(false);
               setPlaying(false);
+              // A real user pause and the PAUSED half of our own recovery
+              // nudge look identical here; only treat it as "stop trying to
+              // resume" when it's not us mid-nudge.
+              if (!nudgingRef.current) wantPlayingRef.current = false;
             }
           },
           onError: (e: { data: number }) => {
@@ -250,6 +254,39 @@ export function useYouTubePlayer(
       playerRef.current = null;
     };
   }, [containerId]);
+
+  /**
+   * Explicit playVideo() alone was not enough to recover a stuck background
+   * track in the field — the same class of Chrome/OS audio-session bug where
+   * `play()` resolves but no audio comes out, sometimes seen on machines
+   * running corporate VPN/security/audio-ducking software. A real user
+   * hitting pause then play *does* fix it, which forces the browser to fully
+   * re-acquire the audio output stream rather than just re-requesting
+   * playback of an already-"playing" element. This reproduces that exact
+   * sequence programmatically instead of only re-issuing playVideo().
+   */
+  const nudge = useCallback(() => {
+    const p = playerRef.current;
+    if (!p) return;
+    nudgingRef.current = true;
+    try {
+      p.pauseVideo();
+    } catch {
+      /* ignore */
+    }
+    window.setTimeout(() => {
+      try {
+        playerRef.current?.playVideo();
+      } catch {
+        /* ignore */
+      }
+      // Give the PAUSED/PLAYING events time to arrive before trusting
+      // wantPlayingRef to onStateChange again.
+      window.setTimeout(() => {
+        nudgingRef.current = false;
+      }, 400);
+    }, 150);
+  }, []);
 
   // Poll progress while playing.
   useEffect(() => {
@@ -313,33 +350,22 @@ export function useYouTubePlayer(
       // once every 4s so this can't fight a real pause or spam the player.
       if (stalledFor > 2000 && sinceNudge > 4000) {
         heartbeatRef.current = { ...hb, nudgedAt: nowMs };
-        try {
-          p.playVideo();
-        } catch {
-          /* ignore */
-        }
+        nudge();
       }
     }, 1000);
     return () => clearInterval(t);
-  }, [ready]);
+  }, [ready, nudge]);
 
   // Extra safety net: some background-tab throttling delays the postMessage
   // command itself rather than the media pipeline. Re-assert on refocus.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      const p = playerRef.current;
-      if (p && wantPlayingRef.current) {
-        try {
-          p.playVideo();
-        } catch {
-          /* ignore */
-        }
-      }
+      if (playerRef.current && wantPlayingRef.current) nudge();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+  }, [nudge]);
 
   /**
    * Browsers block autoplay with sound until the user interacts. Try it, and
