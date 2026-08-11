@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ARTIST, OG_IMAGE, abs } from "@/lib/seo";
 import { SeoHeader, SeoFooter } from "@/components/SeoNav";
+import Background from "@/components/Background";
 
 export const metadata: Metadata = {
   title: "About — a web player that plays only Seedhe Maut",
@@ -50,7 +51,9 @@ export default function AboutPage() {
   };
 
   return (
-    <main className="doc">
+    <>
+      <Background cover="/covers/bayaan.jpg" />
+      <main className="doc">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -106,6 +109,7 @@ export default function AboutPage() {
       </p>
 
       <SeoFooter />
-    </main>
+      </main>
+    </>
   );
 }

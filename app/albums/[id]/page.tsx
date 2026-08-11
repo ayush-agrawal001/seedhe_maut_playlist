@@ -5,6 +5,7 @@ import { getCatalog } from "@/lib/server/catalog";
 import { fmtMs } from "@/lib/format";
 import { ARTIST, OG_IMAGE, abs } from "@/lib/seo";
 import { SeoHeader, SeoFooter } from "@/components/SeoNav";
+import Background from "@/components/Background";
 
 export const revalidate = 21600;
 
@@ -58,7 +59,9 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
   };
 
   return (
-    <main className="doc">
+    <>
+      <Background cover={album.cover || "/covers/na.png"} />
+      <main className="doc">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <SeoHeader />
 
@@ -91,6 +94,7 @@ export default async function AlbumPage({ params }: { params: { id: string } }) 
       )}
 
       <SeoFooter />
-    </main>
+      </main>
+    </>
   );
 }

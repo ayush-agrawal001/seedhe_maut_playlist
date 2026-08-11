@@ -686,6 +686,7 @@ button { font-family: inherit; }
 
 /* ============================ Content pages (SEO) ============================ */
 .doc {
+  position: relative; z-index: 2;
   max-width: 860px;
   margin: 0 auto;
   padding: 40px 24px 90px;
@@ -877,7 +878,9 @@ button { font-family: inherit; }
   display: flex; flex-direction: column; gap: 2px;
   max-height: 440px; overflow-y: auto; padding: 8px 4px 40vh;
   mask-image: linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  scrollbar-width: none; -ms-overflow-style: none;
 }
+.lyrics__synced::-webkit-scrollbar { display: none; }
 .lyrics__line {
   all: unset; cursor: pointer;
   padding: 7px 12px; border-radius: 10px;
