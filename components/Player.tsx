@@ -153,7 +153,12 @@ export default function Player({
           </svg>
         </button>
 
-        {/* Secondary controls fade in on hover so the pill stays clean. */}
+        {/* Volume fades in on hover/focus so the pill stays clean — a mouse
+            affordance that doesn't apply on touch, where the device's own
+            hardware volume already covers it. Lyrics/Queue stay permanently
+            visible instead: on touch there's no hover to reveal them, and
+            they're primary actions (not fine-tuning), so they live outside
+            this group and are never hidden at any width. */}
         <div className="player__extra">
           <button
             className="pctl pctl--sm"
@@ -183,28 +188,29 @@ export default function Player({
             }}
             onChange={(e) => onVolume(Number(e.target.value) / 100)}
           />
-          <button
-            className={`pctl pctl--sm${lyricsOpen ? " active" : ""}`}
-            title="Lyrics"
-            aria-label="Lyrics"
-            onClick={onToggleLyrics}
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M7 4h8l4 4v12H7V4z" />
-              <path d="M15 4v4h4M9.5 12.5h5M9.5 15.5h3.5" />
-            </svg>
-          </button>
-          <button
-            className={`pctl pctl--sm${queueOpen ? " active" : ""}`}
-            title="Queue"
-            aria-label="Queue"
-            onClick={onToggleQueue}
-          >
-            <svg viewBox="0 0 24 24">
-              <path d="M4 7h11M4 12h11M4 17h8M18 9.5v8.2M18 18a1.6 1.6 0 100 .01" />
-            </svg>
-          </button>
         </div>
+
+        <button
+          className={`pctl pctl--sm${lyricsOpen ? " active" : ""}`}
+          title="Lyrics"
+          aria-label="Lyrics"
+          onClick={onToggleLyrics}
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M7 4h8l4 4v12H7V4z" />
+            <path d="M15 4v4h4M9.5 12.5h5M9.5 15.5h3.5" />
+          </svg>
+        </button>
+        <button
+          className={`pctl pctl--sm${queueOpen ? " active" : ""}`}
+          title="Queue"
+          aria-label="Queue"
+          onClick={onToggleQueue}
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M4 7h11M4 12h11M4 17h8M18 9.5v8.2M18 18a1.6 1.6 0 100 .01" />
+          </svg>
+        </button>
       </div>
     </div>
   );
