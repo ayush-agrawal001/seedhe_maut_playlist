@@ -62,6 +62,25 @@ const norm = (s: string): string =>
     .replace(/\([^)]*\)/g, " ")
     .replace(/[^a-z0-9ऀ-ॿ]+/g, "");
 
+/**
+ * How closely a Genius hit's own song title matches what we searched for.
+ * Genius's search ranks by broad relevance, not title match — an
+ * artist-only filter let "Toota" resolve to "Namastute" (same artist,
+ * unrelated song) before this existed, which is worse than showing nothing.
+ */
+function titleScore(want: string, got: string): number {
+  const a = norm(want);
+  const b = norm(got);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  // Short titles ("W", "TT") are too easy to false-match by substring.
+  if (a.length < 4) return 0;
+  if (b.startsWith(a) || a.startsWith(b)) return 0.9;
+  if (b.includes(a) || a.includes(b)) return 0.75;
+  return 0;
+}
+const MIN_TITLE_SCORE = 0.75;
+
 export interface LyricsResult {
   title: string;
   geniusUrl: string;
@@ -86,16 +105,26 @@ export async function findLyricsEmbed(
     const hits = search?.response?.hits ?? [];
     if (!hits.length) return null;
 
-    // Genius search is fuzzy and can return an unrelated song for a short or
-    // common title — only accept a hit plausibly credited to this artist.
+    // Genius search ranks by relevance, not title match, and can surface a
+    // different song by the same artist. Score every artist-plausible hit by
+    // title closeness and take the best, rather than the first artist match.
     const wantedArtist = norm(artist);
-    const candidate =
-      hits.find((h) => {
-        const got = norm(h.result.primary_artist?.name ?? "");
-        if (!got) return false;
-        return got.includes("seedhemaut") || got.includes(wantedArtist) || wantedArtist.includes(got);
-      }) ?? null;
-    if (!candidate) return null;
+    let candidate: GeniusHit | null = null;
+    let bestScore = 0;
+
+    for (const h of hits) {
+      const got = norm(h.result.primary_artist?.name ?? "");
+      const artistOk =
+        got && (got.includes("seedhemaut") || got.includes(wantedArtist) || wantedArtist.includes(got));
+      if (!artistOk) continue;
+
+      const s = titleScore(title, h.result.title);
+      if (s > bestScore) {
+        bestScore = s;
+        candidate = h;
+      }
+    }
+    if (!candidate || bestScore < MIN_TITLE_SCORE) return null;
 
     const full = await geniusFetch<GeniusSongResponse>(`/songs/${candidate.result.id}`, {
       text_format: "html",

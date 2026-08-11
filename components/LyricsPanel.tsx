@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface LyricsResponse {
   found: boolean;
@@ -16,34 +16,46 @@ interface LyricsResponse {
  * relationship YouTube's IFrame player has to raw video files). We never
  * read or render raw lyric text ourselves.
  *
- * innerHTML never executes embedded <script> tags (a DOM safety rule, not a
- * bug), so the script Genius ships alongside the div has to be pulled out and
- * re-inserted as a real element — otherwise the div just sits there empty.
+ * Genius's embed.js writes its content via document.write(), which browsers
+ * only allow for scripts the HTML parser encounters directly — never for a
+ * script inserted after the fact via JS (which is the only option in a
+ * client-rendered React app). Injecting it into the live page silently fails
+ * with "Failed to execute 'write' on 'Document'" and nothing ever renders.
+ * An <iframe srcDoc> sidesteps this: its content gets a genuine fresh parse
+ * as its own document, so the script is parser-inserted there and
+ * document.write() works exactly as Genius intends.
  */
 function GeniusEmbed({ html }: { html: string }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const srcDoc = useMemo(
+    () => `<!doctype html>
+<html>
+<head>
+<base target="_blank">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<style>
+  html, body {
+    margin: 0; padding: 14px;
+    background: #fff; color: #111;
+    font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  a { color: #f13f42; }
+  img { max-width: 100%; }
+</style>
+</head>
+<body>${html}</body>
+</html>`,
+    [html]
+  );
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.innerHTML = html;
-
-    for (const old of Array.from(el.querySelectorAll("script"))) {
-      const fresh = document.createElement("script");
-      if (old.src) fresh.src = old.src;
-      else fresh.textContent = old.textContent;
-      for (const attr of Array.from(old.attributes)) {
-        if (attr.name !== "src") fresh.setAttribute(attr.name, attr.value);
-      }
-      old.replaceWith(fresh);
-    }
-
-    return () => {
-      el.innerHTML = "";
-    };
-  }, [html]);
-
-  return <div className="lyrics__embed" ref={ref} />;
+  return (
+    <iframe
+      className="lyrics__embed"
+      srcDoc={srcDoc}
+      title="Lyrics via Genius"
+      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+      loading="lazy"
+    />
+  );
 }
 
 export default function LyricsPanel({
