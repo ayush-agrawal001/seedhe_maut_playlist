@@ -33,13 +33,25 @@ function GeniusEmbed({ html }: { html: string }) {
 <base target="_blank">
 <meta name="referrer" content="no-referrer-when-downgrade">
 <style>
+  /* Only the wrapping page is ours — Genius's script writes its own content
+     into <body> below. It renders as plain, unstyled elements (no inline
+     colors of its own), so it inherits this palette and reads as part of
+     the site rather than a pasted-in white card. Their own attribution
+     badge keeps its brand colours regardless, which is expected. */
   html, body {
-    margin: 0; padding: 14px;
-    background: #fff; color: #111;
-    font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 0; padding: 18px 20px 24px;
+    background: transparent;
+    color: rgba(255,255,255,.82);
+    font: 14.5px/1.85 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  a { color: #f13f42; }
+  * { box-sizing: border-box; }
+  a { color: #ff6b6b; text-decoration: none; }
+  a:hover { text-decoration: underline; }
   img { max-width: 100%; }
+  ::selection { background: rgba(255,107,107,.35); }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
 </style>
 </head>
 <body>${html}</body>

@@ -871,12 +871,15 @@ button { font-family: inherit; }
 /* .lyrics__embed is the iframe itself (see LyricsPanel.tsx) — it needs its
    own srcDoc-parsed document for Genius's document.write()-based embed.js to
    work at all, so it can't just be a div. Iframes don't auto-size to their
-   content, hence the fixed height + internal scroll for longer lyrics. */
+   content, hence the fixed height + internal scroll for longer lyrics.
+   Solid dark background rather than transparent: an iframe is its own
+   rendering context, so it wouldn't pick up the panel's own backdrop-filter
+   blur behind it — a flat, closely-matched dark tone reads as part of the
+   same panel without relying on that. */
 .lyrics__embed {
   display: block; width: 100%; height: 440px; border: 0; border-radius: 14px;
-  /* Genius's widget ships its own light-themed card — a light backing keeps
-     its text/ads legible instead of dark-on-dark. */
-  background: #fff;
+  background: #131217;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
 }
 
 @media (max-width: 720px) {
