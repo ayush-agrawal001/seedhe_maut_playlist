@@ -12,6 +12,8 @@ export interface YtVideo {
   embeddable: boolean;
   /** Runtime in seconds (0 if unknown). */
   durationSec: number;
+  /** True when sourced from YOUTUBE_PLAYLIST_ID — a human picked this, trust it. */
+  curated: boolean;
 }
 
 /** "PT4M13S" -> 253 */
@@ -142,13 +144,20 @@ async function resolveUploadsPlaylist(): Promise<string> {
 }
 
 /**
- * All uploads from the official channel.
+ * Videos to draw the catalogue from.
+ *
+ * If YOUTUBE_PLAYLIST_ID is set, reads that playlist directly — no channel
+ * lookup call needed, and the result is marked `curated` so catalog.ts trusts
+ * it as real songs rather than running it through the uploads-scan filters.
+ * Otherwise falls back to the channel's uploads playlist.
+ *
  * playlistItems.list costs 1 quota unit per page of 50 — vastly cheaper than
- * search.list (100 units per call) for building a title index.
+ * search.list (100 units per call).
  */
 export async function getChannelVideos(): Promise<YtVideo[]> {
-  return cached("youtube:uploads", env.cache.ttl, async () => {
-    const playlistId = await resolveUploadsPlaylist();
+  return cached("youtube:videos", env.cache.ttl, async () => {
+    const curated = Boolean(env.youtube.playlistId);
+    const playlistId = env.youtube.playlistId || (await resolveUploadsPlaylist());
 
     const items: Array<{ videoId: string; title: string; publishedAt: string }> = [];
     let pageToken = "";
@@ -205,6 +214,7 @@ export async function getChannelVideos(): Promise<YtVideo[]> {
       ...v,
       embeddable: meta.get(v.videoId)?.embeddable ?? false,
       durationSec: meta.get(v.videoId)?.durationSec ?? 0,
+      curated,
     }));
   });
 }

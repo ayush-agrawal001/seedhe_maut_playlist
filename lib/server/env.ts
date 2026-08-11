@@ -30,6 +30,14 @@ export const env = {
     channelId: str("YOUTUBE_CHANNEL_ID"),
     /** Alternative to channelId, e.g. "@SeedheMaut". Resolved via channels.list. */
     channelHandle: str("YOUTUBE_CHANNEL_HANDLE"),
+    /**
+     * A specific playlist to draw videos from instead of scanning the whole
+     * channel. When set, this wins over channelId/channelHandle: no channel
+     * lookup call is needed, and — because it's hand-curated — the fallback
+     * catalogue trusts every video in it as a real song, skipping the
+     * NOT_A_SONG/duration heuristics built for a raw uploads scan.
+     */
+    playlistId: str("YOUTUBE_PLAYLIST_ID"),
     /** Allow falling back to search.list (100 quota units per call). */
     allowSearchFallback: str("YOUTUBE_ALLOW_SEARCH", "false") === "true",
     maxSearchFallbacks: int("YOUTUBE_MAX_SEARCH_FALLBACKS", 0),

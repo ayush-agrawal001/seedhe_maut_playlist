@@ -213,7 +213,9 @@ export async function getCatalog(): Promise<Catalog> {
       for (const v of videos) {
         if (!v.embeddable) continue;
         if (usedVideoIds.has(v.videoId)) continue; // already backing a Spotify track
-        if (!looksLikeSong(v.title, v.durationSec)) continue;
+        // A hand-curated playlist (YOUTUBE_PLAYLIST_ID) is trusted as-is; the
+        // NOT_A_SONG/duration heuristics exist only for a raw uploads scan.
+        if (!v.curated && !looksLikeSong(v.title, v.durationSec)) continue;
         const key = songKey(v.title);
         if (!key) continue;
         const prev = bestPerSong.get(key);

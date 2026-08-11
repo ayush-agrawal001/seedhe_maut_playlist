@@ -129,6 +129,15 @@ export function useYouTubePlayer(
   const onEndedRef = useRef(onEnded);
   const onErrorRef = useRef(onError);
   const pendingRef = useRef<{ videoId: string; autoplay: boolean } | null>(null);
+  /** True whenever playback *should* be running — independent of the last
+   *  confirmed onStateChange, since a backgrounded tab can silently fail to
+   *  reach PLAYING at all. */
+  const wantPlayingRef = useRef(false);
+  const heartbeatRef = useRef<{ time: number; ts: number; nudgedAt: number }>({
+    time: 0,
+    ts: 0,
+    nudgedAt: 0,
+  });
 
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -201,6 +210,7 @@ export function useYouTubePlayer(
           onStateChange: (e: { data: number }) => {
             const S = window.YT!.PlayerState;
             if (e.data === S.ENDED) {
+              wantPlayingRef.current = false;
               setBuffering(false);
               setPlaying(false);
               onEndedRef.current();
@@ -216,11 +226,15 @@ export function useYouTubePlayer(
                 /* ignore */
               }
             } else if (e.data === S.PAUSED) {
+              // A real user pause and an API-reported pause look the same
+              // here; either way we should stop trying to resume it.
+              wantPlayingRef.current = false;
               setBuffering(false);
               setPlaying(false);
             }
           },
           onError: (e: { data: number }) => {
+            wantPlayingRef.current = false;
             setBuffering(false);
             setPlaying(false);
             onErrorRef.current?.(e.data);
@@ -256,6 +270,78 @@ export function useYouTubePlayer(
   }, [playing]);
 
   /**
+   * Background-tab stall guard.
+   *
+   * Reported bug: when the tab is backgrounded and a track auto-advances
+   * (goNext on ENDED -> loadVideoById), Chrome sometimes leaves the new video
+   * silent — no audio, currentTime frozen at 0 — without ever reporting an
+   * error; onStateChange may not even reach PLAYING. Manually hitting pause
+   * then play "unsticks" it, because playVideo() is an explicit API call
+   * rather than an autoplay attempt, so it's allowed even without a fresh
+   * user gesture.
+   *
+   * This does the same thing automatically: runs independent of the last
+   * confirmed player state (via wantPlayingRef, not React's `playing`, since
+   * a stuck load may never fire PLAYING at all) and re-issues playVideo() if
+   * currentTime hasn't advanced within a grace window.
+   */
+  useEffect(() => {
+    if (!ready) return;
+    const t = setInterval(() => {
+      const p = playerRef.current;
+      if (!p || !wantPlayingRef.current) return;
+
+      let now = 0;
+      try {
+        now = p.getCurrentTime() || 0;
+      } catch {
+        return;
+      }
+
+      const hb = heartbeatRef.current;
+      const nowMs = performance.now();
+      const advancing = now > hb.time + 0.2;
+
+      if (advancing) {
+        heartbeatRef.current = { time: now, ts: nowMs, nudgedAt: hb.nudgedAt };
+        return;
+      }
+
+      const stalledFor = nowMs - (hb.ts || nowMs);
+      const sinceNudge = nowMs - hb.nudgedAt;
+      // ~2s grace for legitimate buffering/seeking; don't re-nudge more than
+      // once every 4s so this can't fight a real pause or spam the player.
+      if (stalledFor > 2000 && sinceNudge > 4000) {
+        heartbeatRef.current = { ...hb, nudgedAt: nowMs };
+        try {
+          p.playVideo();
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [ready]);
+
+  // Extra safety net: some background-tab throttling delays the postMessage
+  // command itself rather than the media pipeline. Re-assert on refocus.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const p = playerRef.current;
+      if (p && wantPlayingRef.current) {
+        try {
+          p.playVideo();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  /**
    * Browsers block autoplay with sound until the user interacts. Try it, and
    * if nothing is playing shortly after, mute and try again — muted autoplay
    * is permitted. `autoMuted` then tells the UI to unmute on first gesture.
@@ -279,6 +365,8 @@ export function useYouTubePlayer(
     setCurrentTime(0);
     setDuration(0);
     setQuality("");
+    wantPlayingRef.current = autoplay;
+    heartbeatRef.current = { time: 0, ts: performance.now(), nudgedAt: 0 };
     if (autoplay) setBuffering(true);
     const p = playerRef.current;
     if (!p) {
@@ -302,8 +390,15 @@ export function useYouTubePlayer(
     failed,
     autoMuted,
     load,
-    play: useCallback(() => playerRef.current?.playVideo(), []),
-    pause: useCallback(() => playerRef.current?.pauseVideo(), []),
+    play: useCallback(() => {
+      wantPlayingRef.current = true;
+      heartbeatRef.current = { time: 0, ts: performance.now(), nudgedAt: 0 };
+      playerRef.current?.playVideo();
+    }, []),
+    pause: useCallback(() => {
+      wantPlayingRef.current = false;
+      playerRef.current?.pauseVideo();
+    }, []),
     seek: useCallback((s: number) => playerRef.current?.seekTo(s, true), []),
     setVolume: useCallback((v: number) => playerRef.current?.setVolume(Math.round(v * 100)), []),
     setMuted: useCallback((m: boolean) => {
