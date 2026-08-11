@@ -4,14 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { coverCandidates, probeBestImage } from "@/lib/ytThumb";
 
 /**
- * Full-screen album-reactive backdrop — now the only visual behind the app,
- * so getting a real image matters more than it used to.
+ * Full-screen album-reactive backdrop.
  *
  * Each cover is probed before it's shown, walking a quality fallback chain
  * for YouTube thumbnails (maxres -> sd -> hq) rather than giving up to black
  * on the first miss. See lib/ytThumb.ts for why that chain is necessary.
+ *
+ * `hidden` is used on the player page while the video-as-background mode is
+ * showing through — a paused YouTube frame is dead air, so the cover comes
+ * back over it whenever playback stops.
  */
-export default function Background({ cover }: { cover: string }) {
+export default function Background({ cover, hidden = false }: { cover: string; hidden?: boolean }) {
   const [shown, setShown] = useState("");
   const [incoming, setIncoming] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,7 +53,7 @@ export default function Background({ cover }: { cover: string }) {
   }, [cover, shown]);
 
   return (
-    <div className="bg" aria-hidden>
+    <div className={`bg${hidden ? " bg--off" : ""}`} aria-hidden>
       <div
         className="bg__image"
         style={{ backgroundImage: shown ? `url("${shown}")` : undefined }}

@@ -5,7 +5,12 @@ import { useEffect, useState } from "react";
 const SPOTIFY = "https://open.spotify.com/artist/2oBG74gAocPMFv6Ij9ykdo";
 const YT_MUSIC = "https://music.youtube.com/@SeedheMaut";
 
-export default function TopBar() {
+interface Props {
+  videoOn: boolean;
+  onToggleVideo: () => void;
+}
+
+export default function TopBar({ videoOn, onToggleVideo }: Props) {
   const [clock, setClock] = useState("--:--");
 
   useEffect(() => {
@@ -27,6 +32,19 @@ export default function TopBar() {
       <div className="topbar__clock">{clock}</div>
 
       <nav className="topbar__links">
+        <button
+          className={`vtoggle${videoOn ? " on" : ""}`}
+          role="switch"
+          aria-checked={videoOn}
+          onClick={onToggleVideo}
+          title={videoOn ? "Hide video" : "Show video"}
+        >
+          <span className="vtoggle__label">Video</span>
+          <span className="vtoggle__track">
+            <span className="vtoggle__thumb" />
+          </span>
+        </button>
+
         <a className="tlink" href={SPOTIFY} target="_blank" rel="noopener noreferrer">
           <span className="tlink__badge">
             <svg viewBox="0 0 24 24" aria-hidden>
