@@ -1,13 +1,62 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-interface LyricsResponse {
-  found: boolean;
-  reason?: "not_configured";
-  embedContent?: string;
-  geniusUrl?: string;
-  title?: string;
+interface SyncedLine {
+  time: number;
+  text: string;
+}
+
+type LyricsResponse =
+  | { found: true; kind: "synced"; lines: SyncedLine[] }
+  | { found: true; kind: "genius"; embedContent: string; geniusUrl: string; title: string }
+  | { found: false };
+
+/**
+ * Real, timestamped lyrics (lrclib.net) rendered natively — no iframe needed
+ * here, since this is just data we own the styling of end to end. The active
+ * line is whichever one's timestamp has most recently passed; clicking any
+ * line seeks there.
+ */
+function SyncedLyrics({
+  lines,
+  curTime,
+  onSeek,
+}: {
+  lines: SyncedLine[];
+  curTime: number;
+  onSeek: (seconds: number) => void;
+}) {
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  const activeIndex = useMemo(() => {
+    let idx = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i]!.time <= curTime) idx = i;
+      else break;
+    }
+    return idx;
+  }, [lines, curTime]);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeIndex]);
+
+  return (
+    <div className="lyrics__synced">
+      {lines.map((l, i) => (
+        <button
+          key={i}
+          ref={i === activeIndex ? activeRef : undefined}
+          type="button"
+          className={`lyrics__line${i === activeIndex ? " active" : i < activeIndex ? " past" : ""}`}
+          onClick={() => onSeek(l.time)}
+        >
+          {l.text}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -19,11 +68,9 @@ interface LyricsResponse {
  * Genius's embed.js writes its content via document.write(), which browsers
  * only allow for scripts the HTML parser encounters directly — never for a
  * script inserted after the fact via JS (which is the only option in a
- * client-rendered React app). Injecting it into the live page silently fails
- * with "Failed to execute 'write' on 'Document'" and nothing ever renders.
- * An <iframe srcDoc> sidesteps this: its content gets a genuine fresh parse
- * as its own document, so the script is parser-inserted there and
- * document.write() works exactly as Genius intends.
+ * client-rendered React app). An <iframe srcDoc> sidesteps this: its content
+ * gets a genuine fresh parse as its own document, so the script is
+ * parser-inserted there and document.write() works exactly as Genius intends.
  */
 function GeniusEmbed({ html }: { html: string }) {
   const srcDoc = useMemo(
@@ -74,10 +121,14 @@ export default function LyricsPanel({
   open,
   title,
   artist,
+  curTime,
+  onSeek,
 }: {
   open: boolean;
   title: string;
   artist: string;
+  curTime: number;
+  onSeek: (seconds: number) => void;
 }) {
   const [state, setState] = useState<{ loading: boolean; data: LyricsResponse | null }>({
     loading: true,
@@ -106,12 +157,19 @@ export default function LyricsPanel({
 
   if (!open) return null;
 
+  const data = state.data;
+  const isGenius = data?.found && data.kind === "genius";
+  const isSynced = data?.found && data.kind === "synced";
+
   return (
     <section id="lyrics-panel" className="queue lyrics-panel open" aria-label="Lyrics">
       <div className="lyrics__head">
-        <span>Lyrics</span>
-        {state.data?.geniusUrl && (
-          <a href={state.data.geniusUrl} target="_blank" rel="noopener noreferrer">
+        <span>
+          Lyrics
+          {isSynced && <span className="lyrics__source"> · lrclib.net</span>}
+        </span>
+        {isGenius && (
+          <a href={data.geniusUrl} target="_blank" rel="noopener noreferrer">
             Genius ↗
           </a>
         )}
@@ -119,15 +177,13 @@ export default function LyricsPanel({
 
       {state.loading && <div className="lyrics__status">Looking it up…</div>}
 
-      {!state.loading && state.data?.found && state.data.embedContent && (
-        <GeniusEmbed html={state.data.embedContent} />
+      {!state.loading && isSynced && (
+        <SyncedLyrics lines={data.lines} curTime={curTime} onSeek={onSeek} />
       )}
 
-      {!state.loading && !state.data?.found && state.data?.reason === "not_configured" && (
-        <div className="lyrics__status">Lyrics aren&rsquo;t set up on this deployment yet.</div>
-      )}
+      {!state.loading && isGenius && <GeniusEmbed html={data.embedContent} />}
 
-      {!state.loading && !state.data?.found && state.data?.reason !== "not_configured" && (
+      {!state.loading && !data?.found && (
         <div className="lyrics__status">No lyrics found for this one yet.</div>
       )}
     </section>

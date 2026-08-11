@@ -862,10 +862,38 @@ button { font-family: inherit; }
   transition: color .2s ease;
 }
 .lyrics__head a:hover { color: #fff; }
+.lyrics__source { color: rgba(255,255,255,.3); text-transform: none; letter-spacing: 0; }
 
 .lyrics__status {
   padding: 32px 12px; text-align: center;
   font-size: 13px; color: rgba(255,255,255,.45);
+}
+
+/* Synced lyrics (lrclib.net) — rendered natively as a scrolling list of line
+   buttons rather than an iframe, since we own this content end to end.
+   .active tracks playback position (see LyricsPanel.tsx); .past dims lines
+   already sung so the eye is drawn forward, karaoke-style. */
+.lyrics__synced {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 440px; overflow-y: auto; padding: 8px 4px 40vh;
+  mask-image: linear-gradient(to bottom, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+}
+.lyrics__line {
+  all: unset; cursor: pointer;
+  padding: 7px 12px; border-radius: 10px;
+  font-size: 15px; line-height: 1.5; font-weight: 500;
+  color: rgba(255,255,255,.38);
+  transition: color .25s ease, background-color .25s ease, transform .25s ease;
+}
+.lyrics__line:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.7); }
+.lyrics__line.past { color: rgba(255,255,255,.28); }
+.lyrics__line.active {
+  color: #fff; background: rgba(255,107,107,.14);
+  transform: scale(1.02); transform-origin: left center;
+}
+
+@media (max-width: 720px) {
+  .lyrics__synced { max-height: 320px; }
 }
 
 /* .lyrics__embed is the iframe itself (see LyricsPanel.tsx) — it needs its

@@ -172,6 +172,8 @@ export default function PlayerShell() {
           open={lyricsOpen}
           title={p.current.title}
           artist={p.current.artists}
+          curTime={p.curTime}
+          onSeek={p.seek}
         />
       )}
 
