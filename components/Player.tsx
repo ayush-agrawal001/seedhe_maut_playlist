@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fmt } from "@/lib/format";
+import { coverCandidates, probeBestImage } from "@/lib/ytThumb";
 import type { ApiTrack } from "@/lib/types";
 
 interface Props {
@@ -44,10 +45,24 @@ export default function Player({
   onToggleLyrics,
 }: Props) {
   const [drag, setDrag] = useState<number | null>(null);
-  const [artOk, setArtOk] = useState(true);
+  const [art, setArt] = useState<string | null>(current.cover || null);
 
-  // Reset the artwork probe whenever the track changes.
-  useEffect(() => setArtOk(true), [current.cover]);
+  // Walk the quality fallback chain whenever the track changes, rather than
+  // giving up to a blank sleeve on the first miss (see lib/ytThumb.ts).
+  useEffect(() => {
+    let cancelled = false;
+    if (!current.cover) {
+      setArt(null);
+      return;
+    }
+    probeBestImage(coverCandidates(current.cover)).then((best) => {
+      if (!cancelled) setArt(best);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [current.cover]);
+
   const shown = drag ?? curTime;
   const pct = dur > 0 ? Math.min(100, (shown / dur) * 100) : 0;
 
@@ -61,19 +76,14 @@ export default function Player({
   return (
     <div className={`player${playing ? " playing" : ""}${busy ? " busy" : ""}`} id="player">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      {artOk && current.cover ? (
+      {art ? (
         <img
           className="player__disc"
-          src={current.cover}
+          src={art}
           alt={`${current.album} cover`}
           draggable={false}
           onClick={onToggleQueue}
-          onError={() => setArtOk(false)}
-          onLoad={(e) => {
-            // YouTube serves a 120x90 grey placeholder for missing thumbnails.
-            const i = e.currentTarget;
-            if (i.naturalWidth <= 120 && i.naturalHeight <= 90) setArtOk(false);
-          }}
+          onError={() => setArt(null)}
         />
       ) : (
         <div className="player__disc player__disc--blank" onClick={onToggleQueue} />

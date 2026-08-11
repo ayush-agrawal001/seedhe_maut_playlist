@@ -244,6 +244,20 @@ export function useCatalogPlayer(playerContainerId: string): CatalogPlayerApi {
     };
   }, [yt.autoMuted, yt]);
 
+  // Also try unmuting the instant the tab regains focus — no extra click
+  // needed. Browsers don't always honour an unmute without a fresh gesture,
+  // so this is a bonus attempt, not a replacement for the one above.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!yt.autoMuted) return;
+      yt.setMuted(false);
+      setMuted(false);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [yt]);
+
   useEffect(() => load(), [load]);
 
   /* --------------------------------- controls ---------------------------- */

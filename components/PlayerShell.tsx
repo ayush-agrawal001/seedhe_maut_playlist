@@ -26,7 +26,6 @@ export default function PlayerShell() {
   const queueOpen = panel === "queue";
   const lyricsOpen = panel === "lyrics";
   const [bootHeld, setBootHeld] = useState(true);
-  const [videoOn, setVideoOn] = useState(false); // video off by default
   const [locked, setLocked] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -65,7 +64,7 @@ export default function PlayerShell() {
     };
   }, []);
 
-  // Focus mode: hide every control and leave just the cover or the video.
+  // Focus mode: hide every control and leave just the cover.
   useEffect(() => {
     document.documentElement.classList.toggle("ui-locked", locked);
     return () => document.documentElement.classList.remove("ui-locked");
@@ -103,21 +102,9 @@ export default function PlayerShell() {
 
   return (
     <>
-      {/* The video only shows through while it is actually playing — a paused
-          YouTube frame is dead air, so the cover comes back over it. */}
-      <Background
-        cover={p.current?.cover ?? ""}
-        hidden={videoOn && p.playing}
-      />
-      <TopBar
-        videoOn={videoOn}
-        onToggleVideo={() => {
-          // Turning the video on also switches the backdrop to it; the
-          // "Cover BG" button inside the panel can switch it back.
-          setVideoOn((v) => !v);
-        }}
-      />
-      <Hero docked={videoOn} />
+      <Background cover={p.current?.cover ?? ""} />
+      <TopBar />
+      <Hero />
 
       <LoadingScreen show={(p.loading || bootHeld) && !p.fatalError} />
 
@@ -141,14 +128,9 @@ export default function PlayerShell() {
       )}
 
 
-      {videoOn && p.lowQuality && (
-        <div className="notice notice--warn" role="status">
-          <span className="notice__badge">{p.qualityLabel}</span>
-          Low video quality — switch to a faster connection for the full experience.
-        </div>
-      )}
-
-      <VideoPanel containerId={PLAYER_ID} visible={videoOn} />
+      {/* Kept mounted off-screen — this is the actual audio engine (the
+          IFrame API attaches to it), not just a visual. */}
+      <VideoPanel containerId={PLAYER_ID} />
 
       <MobileHint show={!p.loading && !bootHeld && !p.fatalError} />
 

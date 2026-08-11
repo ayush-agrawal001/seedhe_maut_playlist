@@ -132,11 +132,12 @@ restriction. Nothing but public, documented APIs.
 > the player to stay visible (at least 200x200) while media plays, and forbid
 > audio-only playback.
 >
-> The UI ships with the video **off by default** (`videoOn = false` in
-> `components/PlayerShell.tsx`). In that state the player stays mounted but
-> off-screen so audio keeps running, which does **not** meet the requirement.
-> This is fine for local/personal use; before running this on a public domain,
-> flip `videoOn` to `true` so the player is visible whenever media plays.
+> The video-as-background mode and its toggle are removed for now
+> (`components/VideoPanel.tsx` renders it permanently off-screen — that's the
+> actual audio engine the IFrame API attaches to, not just a visual). In that
+> state audio keeps running with no visible player, which does **not** meet
+> the requirement. Fine for local/personal use; before running this on a
+> public domain, give the player a visible, on-screen home again.
 
 ---
 

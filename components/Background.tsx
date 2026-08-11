@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { coverCandidates, probeBestImage } from "@/lib/ytThumb";
 
 /**
- * Full-screen album-reactive backdrop.
+ * Full-screen album-reactive backdrop — now the only visual behind the app,
+ * so getting a real image matters more than it used to.
  *
- * Each cover is probed before it is shown: YouTube only serves
- * `maxresdefault.jpg` for some videos, and a missing one would otherwise leave
- * a broken or grey placeholder on screen. If it fails to load we simply keep
- * the black base.
+ * Each cover is probed before it's shown, walking a quality fallback chain
+ * for YouTube thumbnails (maxres -> sd -> hq) rather than giving up to black
+ * on the first miss. See lib/ytThumb.ts for why that chain is necessary.
  */
-export default function Background({ cover, hidden = false }: { cover: string; hidden?: boolean }) {
+export default function Background({ cover }: { cover: string }) {
   const [shown, setShown] = useState("");
   const [incoming, setIncoming] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,32 +25,23 @@ export default function Background({ cover, hidden = false }: { cover: string; h
     if (cover === shown) return;
 
     let cancelled = false;
-    const img = new Image();
 
-    img.onload = () => {
+    probeBestImage(coverCandidates(cover)).then((best) => {
       if (cancelled) return;
-      // A 404 thumbnail can still "load" as YouTube's 120x90 grey placeholder.
-      if (img.naturalWidth <= 120 && img.naturalHeight <= 90) {
+      if (!best) {
+        // No usable artwork at any quality — fall back to black.
         setIncoming(null);
         setShown("");
         return;
       }
-      setIncoming(cover);
+      setIncoming(best);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
-        setShown(cover);
+        if (cancelled) return;
+        setShown(best);
         setIncoming(null);
       }, 1200);
-    };
-
-    img.onerror = () => {
-      if (cancelled) return;
-      // No usable artwork — fall back to black rather than a broken image.
-      setIncoming(null);
-      setShown("");
-    };
-
-    img.src = cover;
+    });
 
     return () => {
       cancelled = true;
@@ -58,7 +50,7 @@ export default function Background({ cover, hidden = false }: { cover: string; h
   }, [cover, shown]);
 
   return (
-    <div className={`bg${hidden ? " bg--off" : ""}`} aria-hidden>
+    <div className="bg" aria-hidden>
       <div
         className="bg__image"
         style={{ backgroundImage: shown ? `url("${shown}")` : undefined }}
